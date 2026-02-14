@@ -1,3 +1,11 @@
 <resources>
     <string name="app_name">Accounting</string>
+    <string name="accessibility_service_description">Allows this app to inspect view hierarchies for debugging and analyzing payment interfaces.</string>
+    <string name="overlay_notification_title">View Inspector Active</string>
+    <string name="overlay_notification_content">Inspection overlay is running</string>
+    <string name="notification_channel_name">View Inspector</string>
+    <string name="notification_channel_description">Notification for view inspector overlay service</string>
+    <string name="overlay_permission_required">Overlay permission is required to display the floating button</string>
+    <string name="accessibility_permission_required">Accessibility permission is required to inspect views</string>
+    <string name="inspection_saved">Inspection saved to file</string>
 </resources>
