@@ -6,10 +6,16 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.os.Build
+import android.view.accessibility.AccessibilityEvent
 import android.widget.Toast
 import com.example.accounting.R
 import com.example.accounting.data.FileStorageManager
+import com.example.accounting.detector.PaymentViewDetector
+import com.example.accounting.extractor.TransactionExtractor
 import com.example.accounting.model.InspectionResult
+import com.example.accounting.model.PaymentViewType
+import com.example.accounting.model.TransactionInfo
+import com.example.accounting.notification.TransactionNotificationManager
 import com.example.accounting.util.ViewTreeParser
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -23,6 +29,10 @@ open class ViewInspectionAccessibilityService : AccessibilityService() {
 
     private val fileStorageManager by lazy { FileStorageManager(this) }
     private val scope = CoroutineScope(Dispatchers.Main)
+
+    private var lastTransactionHash: Int? = null
+    private var lastNotificationTime: Long = 0
+    private val debounceMs = 2000L
 
     private val inspectReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
@@ -44,8 +54,33 @@ open class ViewInspectionAccessibilityService : AccessibilityService() {
         }
     }
 
-    override fun onAccessibilityEvent(event: android.view.accessibility.AccessibilityEvent?) {
-        // We don't need to handle events for this service
+    override fun onAccessibilityEvent(event: AccessibilityEvent?) {
+        event ?: return
+
+        val eventType = event.eventType
+        if (eventType != AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED &&
+            eventType != AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED
+        ) {
+            return
+        }
+
+        if (event.packageName != "com.tencent.mm") return
+
+        val rootNode = rootInActiveWindow ?: return
+        val viewNodeInfo = ViewTreeParser.parseNodeTree(rootNode) ?: return
+
+        val viewType = PaymentViewDetector.detectPaymentView(viewNodeInfo)
+        if (viewType != PaymentViewType.None) {
+            val transaction = TransactionExtractor.extractTransaction(viewNodeInfo, viewType)
+
+            transaction?.let {
+                if (shouldShowNotification(it)) {
+                    TransactionNotificationManager.showNotification(this, it)
+                    lastTransactionHash = it.hashCode()
+                    lastNotificationTime = System.currentTimeMillis()
+                }
+            }
+        }
     }
 
     override fun onInterrupt() {
@@ -59,6 +94,22 @@ open class ViewInspectionAccessibilityService : AccessibilityService() {
         } catch (e: Exception) {
             // Receiver might not be registered
         }
+    }
+
+    private fun shouldShowNotification(transaction: TransactionInfo): Boolean {
+        val now = System.currentTimeMillis()
+        val timeSinceLast = now - lastNotificationTime
+
+        if (timeSinceLast < debounceMs) {
+            return false
+        }
+
+        val currentHash = transaction.hashCode()
+        if (currentHash == lastTransactionHash) {
+            return false
+        }
+
+        return true
     }
 
     private fun performInspection() {
