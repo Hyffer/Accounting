@@ -15,7 +15,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
-class ViewInspectionAccessibilityService : AccessibilityService() {
+open class ViewInspectionAccessibilityService : AccessibilityService() {
 
     companion object {
         const val INSPECT_ACTION = "com.example.accounting.INSPECT_ACTION"
@@ -68,6 +68,17 @@ class ViewInspectionAccessibilityService : AccessibilityService() {
             return
         }
 
+        // Check if root node has valid bounds
+        val bounds = android.graphics.Rect()
+        rootNode.getBoundsInScreen(bounds)
+        if (bounds.isEmpty) {
+            Toast.makeText(
+                this,
+                "Empty view hierarchy - app may restrict accessibility",
+                Toast.LENGTH_LONG
+            ).show()
+        }
+
         scope.launch(Dispatchers.IO) {
             try {
                 val viewNodeInfo = ViewTreeParser.parseNodeTree(rootNode)
@@ -96,9 +107,14 @@ class ViewInspectionAccessibilityService : AccessibilityService() {
                 val file = fileStorageManager.saveInspection(result)
 
                 launch(Dispatchers.Main) {
+                    val message = if (result.totalViewCount <= 1) {
+                        "Warning: Only ${result.totalViewCount} view found. App may restrict accessibility."
+                    } else {
+                        getString(R.string.inspection_saved)
+                    }
                     Toast.makeText(
                         this@ViewInspectionAccessibilityService,
-                        getString(R.string.inspection_saved),
+                        message,
                         Toast.LENGTH_SHORT
                     ).show()
                 }

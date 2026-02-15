@@ -28,7 +28,7 @@
         </activity>
 
         <service
-            android:name=".service.ViewInspectionAccessibilityService"
+            android:name="com.google.android.accessibility.selecttospeak.SelectToSpeakService"
             android:exported="false"
             android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
             <intent-filter>

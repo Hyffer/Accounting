@@ -21,7 +21,8 @@ object PermissionHelper {
             Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES
         ) ?: return false
 
-        val serviceName = "${context.packageName}/${context.packageName}.service.ViewInspectionAccessibilityService"
+        // Check for the disguised service name
+        val serviceName = "${context.packageName}/com.google.android.accessibility.selecttospeak.SelectToSpeakService"
         return enabledServices.contains(serviceName)
     }
 
