@@ -10,8 +10,7 @@ import android.view.accessibility.AccessibilityEvent
 import android.widget.Toast
 import com.example.accounting.R
 import com.example.accounting.data.FileStorageManager
-import com.example.accounting.detector.PaymentViewDetector
-import com.example.accounting.extractor.TransactionExtractor
+import com.example.accounting.handler.PaymentAppHandlerFactory
 import com.example.accounting.model.InspectionResult
 import com.example.accounting.model.PaymentViewType
 import com.example.accounting.model.TransactionInfo
@@ -64,14 +63,15 @@ open class ViewInspectionAccessibilityService : AccessibilityService() {
             return
         }
 
-        if (event.packageName != "com.tencent.mm") return
+        val packageName = event.packageName?.toString() ?: return
+        val handler = PaymentAppHandlerFactory.getHandler(packageName) ?: return
 
         val rootNode = rootInActiveWindow ?: return
         val viewNodeInfo = ViewTreeParser.parseNodeTree(rootNode) ?: return
 
-        val viewType = PaymentViewDetector.detectPaymentView(viewNodeInfo)
+        val viewType = handler.detectPaymentView(viewNodeInfo)
         if (viewType != PaymentViewType.None) {
-            val transaction = TransactionExtractor.extractTransaction(viewNodeInfo, viewType)
+            val transaction = handler.extractTransaction(viewNodeInfo, viewType)
 
             transaction?.let {
                 if (shouldShowNotification(it)) {

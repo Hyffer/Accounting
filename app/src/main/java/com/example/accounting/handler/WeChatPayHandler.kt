@@ -1,26 +1,51 @@
-package com.example.accounting.extractor
+package com.example.accounting.handler
 
-import com.example.accounting.detector.PatternMatcher
 import com.example.accounting.model.PaymentViewType
 import com.example.accounting.model.TransactionInfo
 import com.example.accounting.model.ViewNodeInfo
 
-object TransactionExtractor {
+object WeChatPayHandler : PaymentAppHandler {
+    override val packageName = "com.tencent.mm"
 
-    fun extractTransaction(rootNode: ViewNodeInfo, viewType: PaymentViewType): TransactionInfo? {
+    override fun detectPaymentView(rootNode: ViewNodeInfo): PaymentViewType {
+        val allText = collectAllText(rootNode)
+
+        val hasPaymentMethod = allText.any { it.contains("付款方式") }
+        val hasPayButton = allText.any { it.contains("支付") }
+        val hasSuccessText = allText.any { it.contains("支付成功") }
+        val hasCompleteButton = allText.any { it.contains("完成") }
+        val hasAmount = allText.any { PatternMatcher.containsAmount(it) }
+
+        return when {
+            hasSuccessText && hasCompleteButton && hasAmount -> PaymentViewType.Success
+            hasPaymentMethod && hasPayButton && hasAmount -> PaymentViewType.Authentication
+            else -> PaymentViewType.None
+        }
+    }
+
+    override fun extractTransaction(rootNode: ViewNodeInfo, viewType: PaymentViewType): TransactionInfo? {
         val textNodes = collectTextNodes(rootNode)
-
         val amount = extractAmount(textNodes) ?: return null
-        val merchant = extractMerchant(textNodes)
-        val paymentMethod = extractPaymentMethod(textNodes)
 
         return TransactionInfo(
             amount = amount,
-            merchant = merchant,
-            paymentMethod = paymentMethod,
+            merchant = null,
+            paymentMethod = null,
             timestamp = System.currentTimeMillis(),
             viewType = viewType
         )
+    }
+
+    private fun collectAllText(node: ViewNodeInfo): List<String> {
+        val result = mutableListOf<String>()
+
+        fun traverse(currentNode: ViewNodeInfo) {
+            currentNode.text?.let { result.add(it) }
+            currentNode.children.forEach { traverse(it) }
+        }
+
+        traverse(node)
+        return result
     }
 
     private fun collectTextNodes(node: ViewNodeInfo): List<ViewNodeInfo> {
@@ -56,15 +81,5 @@ object TransactionExtractor {
         }
 
         return largestNode?.text?.let { PatternMatcher.extractAmount(it) }
-    }
-
-    private fun extractMerchant(textNodes: List<ViewNodeInfo>): String? {
-        // future implementation
-        return null
-    }
-
-    private fun extractPaymentMethod(textNodes: List<ViewNodeInfo>): String? {
-        // future implementation
-        return null
     }
 }

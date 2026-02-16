@@ -1,4 +1,4 @@
-package com.example.accounting.detector
+package com.example.accounting.handler
 
 object PatternMatcher {
     private val amountPattern = Regex("""[￥¥$][\d,]+\.?\d*""")
