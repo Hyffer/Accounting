@@ -9,7 +9,7 @@ data class TransactionInfo(
 )
 
 sealed class PaymentViewType {
-    object Authentication : PaymentViewType()
+    object Request : PaymentViewType()
     object Success : PaymentViewType()
     object None : PaymentViewType()
 }

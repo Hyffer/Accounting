@@ -18,7 +18,7 @@ object WeChatPayHandler : PaymentAppHandler {
 
         return when {
             hasSuccessText && hasCompleteButton && hasAmount -> PaymentViewType.Success
-            hasPaymentMethod && hasPayButton && hasAmount -> PaymentViewType.Authentication
+            hasPaymentMethod && hasPayButton && hasAmount -> PaymentViewType.Request
             else -> PaymentViewType.None
         }
     }

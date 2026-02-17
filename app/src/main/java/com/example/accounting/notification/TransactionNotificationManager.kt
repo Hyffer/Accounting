@@ -19,7 +19,7 @@ object TransactionNotificationManager {
         createNotificationChannel(notificationManager)
 
         val title = when (transaction.viewType) {
-            is PaymentViewType.Authentication -> "检测到支付请求"
+            is PaymentViewType.Request -> "检测到支付请求"
             is PaymentViewType.Success -> "支付成功"
             else -> return
         }
@@ -46,7 +46,7 @@ object TransactionNotificationManager {
         lines.add("金额: ${transaction.amount}")
         transaction.paymentMethod?.let { lines.add("付款方式: $it") }
 
-        if (transaction.viewType == PaymentViewType.Authentication) {
+        if (transaction.viewType == PaymentViewType.Request) {
             lines.add("状态: 等待确认")
         }
 

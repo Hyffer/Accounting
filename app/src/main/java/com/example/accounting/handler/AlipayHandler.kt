@@ -17,7 +17,7 @@ object AlipayHandler : PaymentAppHandler {
 
         return when {
             hasSuccessText && hasCompleteButton -> PaymentViewType.Success
-            hasPayTo && hasConfirmButton -> PaymentViewType.Authentication
+            hasPayTo && hasConfirmButton -> PaymentViewType.Request
             else -> PaymentViewType.None
         }
     }
@@ -63,7 +63,7 @@ object AlipayHandler : PaymentAppHandler {
 
     private fun extractAmount(textNodes: List<ViewNodeInfo>, viewType: PaymentViewType): String? {
         when (viewType) {
-            is PaymentViewType.Authentication -> {
+            is PaymentViewType.Request -> {
                 for (node in textNodes) {
                     val contentDesc = node.contentDescription
                     if (contentDesc != null && contentDesc.contains("付款金额")) {

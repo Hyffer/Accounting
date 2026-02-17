@@ -11,11 +11,11 @@ The application uses **Accessibility Services** to detect payment views on scree
 ### Phase 1: View Inspector (Completed)
 Build a floating button that inspects the current view hierarchy and saves it for later analysis. This helps identify the structure of payment views in target apps.
 
-### Phase 2: Payment Detection (Planned)
-Detect when a payment view is displayed on screen by matching package names and view patterns discovered in Phase 1.
+### Phase 2: Payment Detection (Completed)
+Detect when a payment view is displayed on screen by matching package names and view patterns discovered in Phase 1. Currently supports WeChat Pay and Alipay with a factory pattern for extensibility.
 
-### Phase 3: Transaction Extraction (Planned)
-Extract transaction details (amount, merchant, time, etc.) from detected payment views using accessibility APIs.
+### Phase 3: Transaction Extraction (Completed)
+Extract transaction details (amount, merchant, time, etc.) from detected payment views using accessibility APIs. Shows notifications for testing instead of persisting to storage.
 
 ### Phase 4: Automatic Recording (Planned)
 Automatically save extracted transaction information to local storage or sync to cloud services.
@@ -81,6 +81,130 @@ User taps floating button
   -> Toast notification shown
 ```
 
+### JSON Output Format
+
+```json
+{
+  "timestamp": 1707891234567,
+  "packageName": "com.tencent.mm",
+  "activityName": "com.tencent.mm.plugin.wallet.pay.ui.WalletPayUI",
+  "totalViewCount": 127,
+  "rootNode": {
+    "className": "android.widget.FrameLayout",
+    "text": null,
+    "contentDescription": null,
+    "viewIdResourceName": "android:id/content",
+    "boundsInScreen": [0, 0, 1080, 2400],
+    "isClickable": false,
+    "isEnabled": true,
+    "isFocusable": false,
+    "isScrollable": false,
+    "childCount": 1,
+    "depth": 0,
+    "children": [...]
+  }
+}
+```
+
+**Analysis Tips:**
+- `packageName` identifies the target app
+- Look for `text` fields containing amounts, merchant names
+- `viewIdResourceName` helps identify specific UI elements
+- `boundsInScreen` shows element positions
+
+---
+
+## Phase 2 & 3: Payment Detection and Extraction - Implementation Details
+
+### Overview
+
+Real-time detection and extraction of payment information from WeChat Pay and Alipay using accessibility events. Uses a factory pattern to cleanly separate detection and extraction logic for each payment app.
+
+### Supported Apps
+
+- **WeChat Pay** (`com.tencent.mm`)
+  - Payment Request: Keywords "付款方式" + "支付" + amount
+  - Payment Success: Keywords "支付成功" + "完成" + amount
+  - Amount extraction: Largest text node containing currency pattern
+
+- **Alipay** (`com.eg.android.AlipayGphone`)
+  - Payment Request: Keywords "付款给" + "确认付款"
+  - Payment Success: Keywords "支付成功" + "完成"
+  - Amount extraction: contentDescription regex `付款金额([\d.]+)元` for request, largest amount text for success
+
+### Architecture
+
+```
++--------------------------------------------------------------+
+|           SelectToSpeakService (disguised accessibility)     |
+|           |- ViewInspectionAccessibilityService (base)       |
+|  - onAccessibilityEvent() filters relevant events            |
+|  - Uses PaymentAppHandlerFactory to route by package name    |
+|  - Calls handler.detectPaymentView() and extractTransaction()|
+|  - Shows notification via TransactionNotificationManager     |
++--------------------------------------------------------------+
+                              |
+                              v
++--------------------------------------------------------------+
+|                  PaymentAppHandlerFactory                    |
+|  - Routes to appropriate handler based on package name       |
+|  - Returns null if package not supported                     |
++--------------------------------------------------------------+
+                              |
+                              v
++--------------------------------------------------------------+
+|              PaymentAppHandler (interface)                   |
+|  - detectPaymentView(rootNode): PaymentViewType              |
+|  - extractTransaction(rootNode, viewType): TransactionInfo?  |
++--------------------------------------------------------------+
+            |                                  |
+            v                                  v
++---------------------------+    +---------------------------+
+|    WeChatPayHandler       |    |      AlipayHandler        |
+| - Detection patterns      |    | - Detection patterns      |
+| - Amount extraction       |    | - Amount extraction       |
++---------------------------+    +---------------------------+
+```
+
+### Detection Patterns
+
+The app uses fuzzy keyword matching instead of relying on fragile resource IDs or exact view hierarchy:
+
+**WeChat Pay:**
+- Payment Request: "付款方式" AND "支付" AND contains amount
+- Payment Success: "支付成功" AND "完成" AND contains amount
+
+**Alipay:**
+- Payment Request: "付款给" AND "确认付款"
+- Payment Success: "支付成功" AND "完成"
+
+**Why fuzzy matching?**
+- UI layouts change between app versions
+- Resource IDs are not stable across releases
+- Keywords are more resilient to minor UI changes
+
+### Transaction Extraction
+
+**Amount Detection:**
+- Currency pattern regex: `[￥¥$][\d,]+\.?\d*`
+- WeChat Pay: Find text node with largest bounds containing amount pattern
+- Alipay Request: Parse contentDescription with regex `付款金额([\d.]+)元`
+- Alipay Success: Find text node with largest bounds containing amount pattern
+
+**Duplicate Prevention:**
+- 2-second debounce on accessibility events
+- Transaction hash (amount + viewType) tracking
+- Prevents duplicate notifications from frequent events
+
+---
+
+## Next Steps (Phase 4)
+
+1. **Persist Transactions:** Save TransactionInfo to local database (Room)
+2. **Cloud Sync:** Implement optional sync to cloud services
+3. **Transaction History UI:** Build interface to view and manage recorded transactions
+4. **Category Management:** Add support for transaction categorization and tagging
+
 ---
 
 ## File Structure
@@ -91,8 +215,17 @@ app/src/main/java/com/example/accounting/
 |-- model/
 |   |-- ViewNodeInfo.kt
 |   |-- InspectionResult.kt
+|   |-- TransactionInfo.kt
 |-- service/
 |   |-- ViewInspectionAccessibilityService.kt
+|-- handler/
+|   |-- PaymentAppHandler.kt
+|   |-- WeChatPayHandler.kt
+|   |-- AlipayHandler.kt
+|   |-- PaymentAppHandlerFactory.kt
+|   |-- PatternMatcher.kt
+|-- notification/
+|   |-- TransactionNotificationManager.kt
 |-- overlay/
 |   |-- FloatingOverlayService.kt
 |   |-- FloatingOverlayManager.kt
@@ -152,6 +285,119 @@ data class InspectionResult(
 
 ---
 
+#### `model/TransactionInfo.kt`
+Data model for extracted transaction information.
+
+```kotlin
+data class TransactionInfo(
+    val amount: String,              // Transaction amount (e.g., "￥12.50")
+    val merchant: String?,           // Merchant name (currently null)
+    val paymentMethod: String?,      // Payment method (currently null)
+    val timestamp: Long,             // Detection timestamp
+    val viewType: PaymentViewType    // Request or Success
+)
+
+sealed class PaymentViewType {
+    object Request : PaymentViewType()  // Payment authentication screen
+    object Success : PaymentViewType()  // Payment success screen
+    object None : PaymentViewType()     // Not a payment view
+}
+```
+
+**TransactionInfo:** Represents a detected and extracted transaction. Currently shown as notification, will be persisted in Phase 4.
+
+**PaymentViewType:** Used by handlers to indicate what type of payment view was detected. Determines notification content and future behavior.
+
+---
+
+### Handler Classes
+
+#### `handler/PaymentAppHandler.kt`
+Interface defining the contract for payment app handlers.
+
+```kotlin
+interface PaymentAppHandler {
+    val packageName: String
+    fun detectPaymentView(rootNode: ViewNodeInfo): PaymentViewType
+    fun extractTransaction(rootNode: ViewNodeInfo, viewType: PaymentViewType): TransactionInfo?
+}
+```
+
+**Use Case:** Provides a clean abstraction for payment detection and extraction. Each payment app implements this interface.
+
+---
+
+#### `handler/PaymentAppHandlerFactory.kt`
+Factory object for routing to appropriate payment handler.
+
+```kotlin
+object PaymentAppHandlerFactory {
+    fun getHandler(packageName: String): PaymentAppHandler?
+}
+```
+
+**Use Case:** Routes accessibility events to the correct handler based on package name. Returns null for unsupported apps.
+
+---
+
+#### `handler/WeChatPayHandler.kt`
+Handler implementation for WeChat Pay detection and extraction.
+
+**Detection Logic:**
+- Collects all text from view hierarchy
+- Checks for keyword combinations: "付款方式" + "支付" + amount for request
+- Checks for keyword combinations: "支付成功" + "完成" + amount for success
+
+**Extraction Logic:**
+- Collects all text nodes
+- Filters nodes containing currency amounts
+- Returns text from node with largest screen bounds
+
+---
+
+#### `handler/AlipayHandler.kt`
+Handler implementation for Alipay detection and extraction.
+
+**Detection Logic:**
+- Collects all text from view hierarchy
+- Checks for keyword combinations: "付款给" + "确认付款" for request
+- Checks for keyword combinations: "支付成功" + "完成" for success
+
+**Extraction Logic:**
+- For request views: Parses contentDescription using regex `付款金额([\d.]+)元`
+- For success views: Finds largest text node with currency amount
+
+---
+
+#### `handler/PatternMatcher.kt`
+Utility object for pattern matching in text.
+
+**Functions:**
+- `containsAmount(text)`: Returns true if text contains currency pattern `[￥¥$][\d,]+\.?\d*`
+- `extractAmount(text)`: Extracts first amount match from text
+- `containsKeywords(text, keywords)`: Checks if text contains any of the keywords
+
+**Use Case:** Used by handlers to detect amounts and keywords in view text.
+
+---
+
+### Notification Classes
+
+#### `notification/TransactionNotificationManager.kt`
+Manages Android notifications for detected transactions.
+
+**Features:**
+- Creates notification channel for Android O+
+- Shows different titles for Request vs Success views
+- Includes amount and status information
+- Auto-cancel on tap
+
+**Notification Content:**
+- Request: "检测到支付请求" + amount + "状态: 等待确认"
+- Success: "支付成功" + amount
+
+---
+
 ### Utility Classes
 
 #### `util/PermissionHelper.kt`
@@ -177,30 +423,6 @@ Converts AccessibilityNodeInfo tree to ViewNodeInfo data structure.
 - `parseNodeTree(node, depth)`: Recursively parses AccessibilityNodeInfo into ViewNodeInfo
 - `countViews(node)`: Counts total nodes in tree
 
-**Implementation Details:**
-```kotlin
-fun parseNodeTree(node: AccessibilityNodeInfo?, depth: Int = 0): ViewNodeInfo? {
-    if (node == null) return null
-
-    val bounds = Rect()
-    node.getBoundsInScreen(bounds)
-
-    val children = mutableListOf<ViewNodeInfo>()
-    for (i in 0 until node.childCount) {
-        val childNode = node.getChild(i)
-        val childInfo = parseNodeTree(childNode, depth + 1)
-        if (childInfo != null) {
-            children.add(childInfo)
-        }
-        childNode?.recycle()  // Important: recycle to avoid memory leaks
-    }
-
-    return ViewNodeInfo(...)
-}
-```
-
-**Memory Management:** Every `getChild()` call creates a new AccessibilityNodeInfo that must be recycled. The parser handles this automatically.
-
 ---
 
 ### Data Layer
@@ -225,33 +447,22 @@ Manages JSON file I/O for inspection results.
 ### Accessibility Service
 
 #### `service/ViewInspectionAccessibilityService.kt`
-Base accessibility service that handles view inspection.
+Base accessibility service that handles view inspection and payment detection.
 
 **Key Components:**
 
-1. **BroadcastReceiver** - Listens for `INSPECT_ACTION` broadcast
-2. **performInspection()** - Captures and saves view tree
-3. **Error Handling** - Warns user if view hierarchy is empty or restricted
+1. **BroadcastReceiver** - Listens for `INSPECT_ACTION` broadcast (Phase 1)
+2. **performInspection()** - Captures and saves view tree (Phase 1)
+3. **onAccessibilityEvent()** - Real-time payment detection and extraction (Phase 2 & 3)
 
-**Implementation Details:**
-```kotlin
-open class ViewInspectionAccessibilityService : AccessibilityService() {
-    companion object {
-        const val INSPECT_ACTION = "com.example.accounting.INSPECT_ACTION"
-    }
-
-    private val scope = CoroutineScope(Dispatchers.Main)
-
-    // Uses coroutines for background file I/O
-    private fun performInspection() {
-        scope.launch(Dispatchers.IO) {
-            val viewNodeInfo = ViewTreeParser.parseNodeTree(rootNode)
-            val file = fileStorageManager.saveInspection(result)
-            // Show toast on Main thread
-        }
-    }
-}
-```
+**Payment Detection Flow:**
+1. Receives `WINDOW_CONTENT_CHANGED` or `WINDOW_STATE_CHANGED` events
+2. Checks if package name is supported via `PaymentAppHandlerFactory`
+3. Parses view tree using `ViewTreeParser`
+4. Calls `handler.detectPaymentView()` to check if it's a payment view
+5. If payment view detected, calls `handler.extractTransaction()`
+6. Shows notification via `TransactionNotificationManager`
+7. Uses debounce (2 seconds) and hash tracking to prevent duplicates
 
 **Important:** The class is marked `open` so it can be extended by the disguised service.
 
@@ -270,10 +481,11 @@ import com.example.accounting.service.ViewInspectionAccessibilityService
 
 class SelectToSpeakService: ViewInspectionAccessibilityService() {
     // Inherits all functionality from base class
+    // Empty wrapper for package name disguise
 }
 ```
 
-**Key Trick:** The package name `com.google.android.accessibility.selecttospeak` appears in the accessibility settings, making it look like an official Google service.
+**Important:** Do not add code to this class. It is only a wrapper for the package name disguise. All logic should be in `ViewInspectionAccessibilityService`.
 
 ---
 
@@ -419,7 +631,7 @@ Permissions and service declarations.
 6. Find "Accounting" and enable it
 7. Return to app
 
-### Capturing Views
+### Capturing Views (for developer)
 
 1. Tap "Start Inspection" button
 2. Floating "V" button appears on screen
@@ -428,7 +640,7 @@ Permissions and service declarations.
 5. Toast confirms inspection saved
 6. Repeat for other screens
 
-### Viewing Results
+#### Viewing Results
 
 **Using ADB:**
 ```bash
@@ -443,48 +655,6 @@ cat inspection_1707891234567.json
 2. Navigate to `/data/data/com.example.accounting/files/inspections/`
 3. Right-click file - Save As
 4. Open JSON file in text editor
-
----
-
-## JSON Output Format
-
-```json
-{
-  "timestamp": 1707891234567,
-  "packageName": "com.tencent.mm",
-  "activityName": "com.tencent.mm.plugin.wallet.pay.ui.WalletPayUI",
-  "totalViewCount": 127,
-  "rootNode": {
-    "className": "android.widget.FrameLayout",
-    "text": null,
-    "contentDescription": null,
-    "viewIdResourceName": "android:id/content",
-    "boundsInScreen": [0, 0, 1080, 2400],
-    "isClickable": false,
-    "isEnabled": true,
-    "isFocusable": false,
-    "isScrollable": false,
-    "childCount": 1,
-    "depth": 0,
-    "children": [...]
-  }
-}
-```
-
-**Analysis Tips:**
-- `packageName` identifies the target app
-- Look for `text` fields containing amounts, merchant names
-- `viewIdResourceName` helps identify specific UI elements
-- `boundsInScreen` shows element positions
-
----
-
-## Next Steps (Phase 2)
-
-1. **Analyze Inspections:** Review captured JSON files to identify patterns in payment views
-2. **Define Patterns:** Create rules to detect payment screens (package name + view structure)
-3. **Implement Detection:** Add real-time monitoring for payment view display
-4. **Test on Multiple Apps:** Validate detection works across WeChat Pay, Alipay, etc.
 
 ---
 

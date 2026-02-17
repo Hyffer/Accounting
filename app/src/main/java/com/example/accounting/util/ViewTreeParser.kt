@@ -18,7 +18,6 @@ object ViewTreeParser {
             if (childInfo != null) {
                 children.add(childInfo)
             }
-            childNode?.recycle()
         }
 
         return ViewNodeInfo(
