@@ -20,6 +20,19 @@ object ViewTreeParser {
             }
         }
 
+        // Calculate height and size
+        val height = if (children.isEmpty()) {
+            0
+        } else {
+            children.maxOf { it.height } + 1
+        }
+
+        val size = if (children.isEmpty()) {
+            1
+        } else {
+            children.sumOf { it.size } + 1
+        }
+
         return ViewNodeInfo(
             className = node.className?.toString(),
             text = node.text?.toString(),
@@ -32,12 +45,10 @@ object ViewTreeParser {
             isScrollable = node.isScrollable,
             childCount = node.childCount,
             depth = depth,
+            height = height,
+            size = size,
             children = children
         )
     }
 
-    fun countViews(node: ViewNodeInfo?): Int {
-        if (node == null) return 0
-        return 1 + node.children.sumOf { countViews(it) }
-    }
 }

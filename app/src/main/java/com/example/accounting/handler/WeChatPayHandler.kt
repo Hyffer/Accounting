@@ -8,13 +8,11 @@ object WeChatPayHandler : PaymentAppHandler {
     override val packageName = "com.tencent.mm"
 
     override fun detectPaymentView(rootNode: ViewNodeInfo): PaymentViewType {
-        val allText = collectAllText(rootNode)
-
-        val hasPaymentMethod = allText.any { it.contains("付款方式") }
-        val hasPayButton = allText.any { it.contains("支付") }
-        val hasSuccessText = allText.any { it.contains("支付成功") }
-        val hasCompleteButton = allText.any { it.contains("完成") }
-        val hasAmount = allText.any { PatternMatcher.containsAmount(it) }
+        val hasPaymentMethod = ViewNodeUtils.hasText(rootNode, "付款方式")
+        val hasPayButton = ViewNodeUtils.hasButtonWithText(rootNode, "支付")
+        val hasSuccessText = ViewNodeUtils.hasText(rootNode, "支付成功")
+        val hasCompleteButton = ViewNodeUtils.hasButtonWithText(rootNode, "完成")
+        val hasAmount = ViewNodeUtils.collectAllText(rootNode).any { PatternMatcher.containsAmount(it) }
 
         return when {
             hasSuccessText && hasCompleteButton && hasAmount -> PaymentViewType.Success
@@ -24,7 +22,7 @@ object WeChatPayHandler : PaymentAppHandler {
     }
 
     override fun extractTransaction(rootNode: ViewNodeInfo, viewType: PaymentViewType): TransactionInfo? {
-        val textNodes = collectTextNodes(rootNode)
+        val textNodes = ViewNodeUtils.collectTextNodesWithContentDesc(rootNode)
         val amount = extractAmount(textNodes) ?: return null
 
         return TransactionInfo(
@@ -34,32 +32,6 @@ object WeChatPayHandler : PaymentAppHandler {
             timestamp = System.currentTimeMillis(),
             viewType = viewType
         )
-    }
-
-    private fun collectAllText(node: ViewNodeInfo): List<String> {
-        val result = mutableListOf<String>()
-
-        fun traverse(currentNode: ViewNodeInfo) {
-            currentNode.text?.let { result.add(it) }
-            currentNode.children.forEach { traverse(it) }
-        }
-
-        traverse(node)
-        return result
-    }
-
-    private fun collectTextNodes(node: ViewNodeInfo): List<ViewNodeInfo> {
-        val result = mutableListOf<ViewNodeInfo>()
-
-        fun traverse(currentNode: ViewNodeInfo) {
-            if (!currentNode.text.isNullOrEmpty()) {
-                result.add(currentNode)
-            }
-            currentNode.children.forEach { traverse(it) }
-        }
-
-        traverse(node)
-        return result
     }
 
     private fun extractAmount(textNodes: List<ViewNodeInfo>): String? {

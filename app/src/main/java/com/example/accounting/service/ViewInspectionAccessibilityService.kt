@@ -152,7 +152,7 @@ open class ViewInspectionAccessibilityService : AccessibilityService() {
                     packageName = packageName,
                     activityName = activityName,
                     rootNode = viewNodeInfo,
-                    totalViewCount = ViewTreeParser.countViews(viewNodeInfo)
+                    totalViewCount = viewNodeInfo.size
                 )
 
                 val file = fileStorageManager.saveInspection(result)

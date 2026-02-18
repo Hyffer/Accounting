@@ -8,12 +8,10 @@ object AlipayHandler : PaymentAppHandler {
     override val packageName = "com.eg.android.AlipayGphone"
 
     override fun detectPaymentView(rootNode: ViewNodeInfo): PaymentViewType {
-        val allText = collectAllText(rootNode)
-
-        val hasPayTo = allText.any { it.contains("付款给") }
-        val hasConfirmButton = allText.any { it.contains("确认付款") }
-        val hasSuccessText = allText.any { it.contains("支付成功") }
-        val hasCompleteButton = allText.any { it.contains("完成") }
+        val hasPayTo = ViewNodeUtils.hasText(rootNode, "付款给")
+        val hasConfirmButton = ViewNodeUtils.hasButtonWithText(rootNode, "确认付款")
+        val hasSuccessText = ViewNodeUtils.hasText(rootNode, "支付成功")
+        val hasCompleteButton = ViewNodeUtils.hasButtonWithText(rootNode, "完成")
 
         return when {
             hasSuccessText && hasCompleteButton -> PaymentViewType.Success
@@ -23,7 +21,7 @@ object AlipayHandler : PaymentAppHandler {
     }
 
     override fun extractTransaction(rootNode: ViewNodeInfo, viewType: PaymentViewType): TransactionInfo? {
-        val textNodes = collectTextNodesWithContentDesc(rootNode)
+        val textNodes = ViewNodeUtils.collectTextNodesWithContentDesc(rootNode)
         val amount = extractAmount(textNodes, viewType) ?: return null
 
         return TransactionInfo(
@@ -33,32 +31,6 @@ object AlipayHandler : PaymentAppHandler {
             timestamp = System.currentTimeMillis(),
             viewType = viewType
         )
-    }
-
-    private fun collectAllText(node: ViewNodeInfo): List<String> {
-        val result = mutableListOf<String>()
-
-        fun traverse(currentNode: ViewNodeInfo) {
-            currentNode.text?.let { result.add(it) }
-            currentNode.children.forEach { traverse(it) }
-        }
-
-        traverse(node)
-        return result
-    }
-
-    private fun collectTextNodesWithContentDesc(node: ViewNodeInfo): List<ViewNodeInfo> {
-        val result = mutableListOf<ViewNodeInfo>()
-
-        fun traverse(currentNode: ViewNodeInfo) {
-            if (!currentNode.text.isNullOrEmpty() || !currentNode.contentDescription.isNullOrEmpty()) {
-                result.add(currentNode)
-            }
-            currentNode.children.forEach { traverse(it) }
-        }
-
-        traverse(node)
-        return result
     }
 
     private fun extractAmount(textNodes: List<ViewNodeInfo>, viewType: PaymentViewType): String? {

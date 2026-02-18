@@ -101,6 +101,8 @@ User taps floating button
     "isScrollable": false,
     "childCount": 1,
     "depth": 0,
+    "height": 12,
+    "size": 127,
     "children": [...]
   }
 }
@@ -258,8 +260,10 @@ data class ViewNodeInfo(
     val isEnabled: Boolean,           // Enabled state
     val isFocusable: Boolean,         // Can receive focus
     val isScrollable: Boolean,        // Can be scrolled
-    val childCount: Int,              // Number of children
+    val childCount: Int,              // Number of direct children
     val depth: Int,                   // Depth in tree (0 = root)
+    val height: Int,                  // Height of subtree (leaf node is 0)
+    val size: Int,                    // Total node count of subtree (leaf node is 1)
     val children: List<ViewNodeInfo>  // Child nodes
 )
 ```
@@ -420,8 +424,11 @@ val serviceName = "${context.packageName}/com.google.android.accessibility.selec
 Converts AccessibilityNodeInfo tree to ViewNodeInfo data structure.
 
 **Functions:**
-- `parseNodeTree(node, depth)`: Recursively parses AccessibilityNodeInfo into ViewNodeInfo
-- `countViews(node)`: Counts total nodes in tree
+- `parseNodeTree(node, depth)`: Recursively parses AccessibilityNodeInfo into ViewNodeInfo, calculating height and size properties for each node
+
+**Computed Properties:**
+- `height`: Calculated as max child height + 1 (leaf nodes have height 0)
+- `size`: Calculated as sum of child sizes + 1 (leaf nodes have size 1)
 
 ---
 
