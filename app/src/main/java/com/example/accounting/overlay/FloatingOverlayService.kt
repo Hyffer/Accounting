@@ -16,12 +16,17 @@ class FloatingOverlayService : Service() {
     companion object {
         const val CHANNEL_ID = "view_inspector"
         const val NOTIFICATION_ID = 1
+
+        @Volatile
+        var isRunning: Boolean = false
+            private set
     }
 
     private var overlayManager: FloatingOverlayManager? = null
 
     override fun onCreate() {
         super.onCreate()
+        isRunning = true
         createNotificationChannel()
         startForeground()
         setupOverlay()
@@ -35,6 +40,7 @@ class FloatingOverlayService : Service() {
 
     override fun onDestroy() {
         super.onDestroy()
+        isRunning = false
         overlayManager?.hide()
     }
 

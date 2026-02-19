@@ -1,22 +1,37 @@
 package com.example.accounting
 
 import android.content.Intent
-import android.net.Uri
-import android.os.Build
 import android.os.Bundle
-import android.provider.Settings
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.layout.*
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Button
+import androidx.compose.material3.Card
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import com.example.accounting.overlay.FloatingOverlayService
 import com.example.accounting.ui.theme.AccountingTheme
 import com.example.accounting.util.PermissionHelper
@@ -35,33 +50,33 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
-
-    override fun onResume() {
-        super.onResume()
-        // Trigger recomposition to update permission status
-        setContent {
-            AccountingTheme {
-                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    MainScreen(
-                        modifier = Modifier.padding(innerPadding)
-                    )
-                }
-            }
-        }
-    }
 }
 
 @Composable
 fun MainScreen(modifier: Modifier = Modifier) {
     val context = LocalContext.current
     val activity = context as? ComponentActivity
+    val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
 
-    var isServiceRunning by remember { mutableStateOf(false) }
-
-    // Check permission status
-    val hasOverlayPermission = PermissionHelper.checkOverlayPermission(context)
-    val hasAccessibilityPermission = PermissionHelper.checkAccessibilityPermission(context)
+    var isServiceRunning by remember { mutableStateOf(FloatingOverlayService.isRunning) }
+    var hasOverlayPermission by remember { mutableStateOf(PermissionHelper.checkOverlayPermission(context)) }
+    var hasAccessibilityPermission by remember { mutableStateOf(PermissionHelper.checkAccessibilityPermission(context)) }
     val allPermissionsGranted = hasOverlayPermission && hasAccessibilityPermission
+
+    // Refresh permission and service status when the activity resumes
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                hasOverlayPermission = PermissionHelper.checkOverlayPermission(context)
+                hasAccessibilityPermission = PermissionHelper.checkAccessibilityPermission(context)
+                isServiceRunning = FloatingOverlayService.isRunning
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
 
     Column(
         modifier = modifier
