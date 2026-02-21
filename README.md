@@ -20,3 +20,24 @@
 支付宝扫码支付的行为表现与微信类似。
 
 淘宝在使用支付宝付款时并不会跳转到支付宝，而是会显示与支付宝类似的付款确认页面，但支付成功页面与支付宝不同，且不显示金额。
+
+## Usage Instructions
+
+### First Time Setup
+
+1. Install APK on device
+2. Launch app
+3. Tap "Grant Overlay Permission" - Enable in Settings
+4. Return to app
+5. Tap "Grant Accessibility Permission" - Open Accessibility Settings
+6. Find "Accounting" and enable it
+7. Return to app
+
+### Capturing Views (for developer)
+
+1. Tap "Start Inspection" button
+2. Floating "V" button appears on screen
+3. Navigate to target app (e.g., WeChat Pay)
+4. Tap floating button when on desired screen
+5. Toast confirms inspection saved
+6. Repeat for other screens
