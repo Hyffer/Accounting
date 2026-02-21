@@ -130,9 +130,9 @@ Utility object for pattern matching in text. Used by handlers to detect amounts 
 
 ```kotlin
 object PatternMatcher {
-    // amount pattern: `[￥¥$][\d,]+\.?\d*`
+    // amount pattern: `[￥¥$]([\d,]+\.?\d*)`
     fun containsAmount(text: String): Boolean
-    fun extractAmount(text: String): String?
+    fun extractAmount(text: String): BigDecimal?
     fun containsKeywords(text: String, keywords: List<String>): Boolean
 }
 ```

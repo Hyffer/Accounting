@@ -3,6 +3,7 @@ package com.example.accounting.handler
 import com.example.accounting.model.PaymentViewType
 import com.example.accounting.model.TransactionInfo
 import com.example.accounting.model.ViewNodeInfo
+import java.math.BigDecimal
 
 object WeChatPayHandler : PaymentAppHandler {
     override val packageName = "com.tencent.mm"
@@ -34,7 +35,7 @@ object WeChatPayHandler : PaymentAppHandler {
         )
     }
 
-    private fun extractAmount(textNodes: List<ViewNodeInfo>): String? {
+    private fun extractAmount(textNodes: List<ViewNodeInfo>): BigDecimal? {
         val nodesWithAmount = textNodes.filter { node ->
             PatternMatcher.containsAmount(node.text ?: "")
         }

@@ -1,7 +1,9 @@
 package com.example.accounting.model
 
+import java.math.BigDecimal
+
 data class TransactionInfo(
-    val amount: String,
+    val amount: BigDecimal,
     val merchant: String?,
     val paymentMethod: String?,
     val timestamp: Long,

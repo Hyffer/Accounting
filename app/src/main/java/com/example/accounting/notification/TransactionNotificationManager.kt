@@ -43,7 +43,7 @@ object TransactionNotificationManager {
         val lines = mutableListOf<String>()
 
         transaction.merchant?.let { lines.add("商户: $it") }
-        lines.add("金额: ${transaction.amount}")
+        lines.add("金额: ¥${transaction.amount}")
         transaction.paymentMethod?.let { lines.add("付款方式: $it") }
 
         if (transaction.viewType == PaymentViewType.Request) {

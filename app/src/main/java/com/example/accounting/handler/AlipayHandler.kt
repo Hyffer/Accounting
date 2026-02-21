@@ -3,6 +3,7 @@ package com.example.accounting.handler
 import com.example.accounting.model.PaymentViewType
 import com.example.accounting.model.TransactionInfo
 import com.example.accounting.model.ViewNodeInfo
+import java.math.BigDecimal
 
 object AlipayHandler : PaymentAppHandler {
     override val packageName = "com.eg.android.AlipayGphone"
@@ -33,7 +34,7 @@ object AlipayHandler : PaymentAppHandler {
         )
     }
 
-    private fun extractAmount(textNodes: List<ViewNodeInfo>, viewType: PaymentViewType): String? {
+    private fun extractAmount(textNodes: List<ViewNodeInfo>, viewType: PaymentViewType): BigDecimal? {
         when (viewType) {
             is PaymentViewType.Request -> {
                 for (node in textNodes) {
@@ -43,7 +44,7 @@ object AlipayHandler : PaymentAppHandler {
                         val match = regex.find(contentDesc)
                         if (match != null) {
                             val amountValue = match.groupValues[1]
-                            return "￥$amountValue"
+                            return amountValue.toBigDecimalOrNull()
                         }
                     }
                 }
