@@ -21,7 +21,10 @@ object AlipayHandler : PaymentAppHandler {
         }
     }
 
-    override fun extractTransaction(rootNode: ViewNodeInfo, viewType: PaymentViewType): TransactionInfo? {
+    override fun extractTransaction(
+        rootNode: ViewNodeInfo,
+        viewType: PaymentViewType
+    ): TransactionInfo? {
         val textNodes = ViewNodeUtils.collectTextNodesWithContentDesc(rootNode)
         val amount = extractAmount(textNodes, viewType) ?: return null
 
@@ -34,7 +37,10 @@ object AlipayHandler : PaymentAppHandler {
         )
     }
 
-    private fun extractAmount(textNodes: List<ViewNodeInfo>, viewType: PaymentViewType): BigDecimal? {
+    private fun extractAmount(
+        textNodes: List<ViewNodeInfo>,
+        viewType: PaymentViewType
+    ): BigDecimal? {
         when (viewType) {
             is PaymentViewType.Request -> {
                 for (node in textNodes) {
@@ -49,6 +55,7 @@ object AlipayHandler : PaymentAppHandler {
                     }
                 }
             }
+
             is PaymentViewType.Success -> {
                 val nodesWithAmount = textNodes.filter { node ->
                     val text = node.text ?: ""
@@ -69,6 +76,7 @@ object AlipayHandler : PaymentAppHandler {
                     return largestNode?.text?.let { PatternMatcher.extractAmount(it) }
                 }
             }
+
             else -> {}
         }
         return null

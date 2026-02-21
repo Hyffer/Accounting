@@ -55,12 +55,24 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun MainScreen(modifier: Modifier = Modifier) {
     val context = LocalContext.current
-    val activity = context as? ComponentActivity
+    context as? ComponentActivity
     val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
 
     var isServiceRunning by remember { mutableStateOf(FloatingOverlayService.isRunning) }
-    var hasOverlayPermission by remember { mutableStateOf(PermissionHelper.checkOverlayPermission(context)) }
-    var hasAccessibilityPermission by remember { mutableStateOf(PermissionHelper.checkAccessibilityPermission(context)) }
+    var hasOverlayPermission by remember {
+        mutableStateOf(
+            PermissionHelper.checkOverlayPermission(
+                context
+            )
+        )
+    }
+    var hasAccessibilityPermission by remember {
+        mutableStateOf(
+            PermissionHelper.checkAccessibilityPermission(
+                context
+            )
+        )
+    }
     val allPermissionsGranted = hasOverlayPermission && hasAccessibilityPermission
 
     // Refresh permission and service status when the activity resumes

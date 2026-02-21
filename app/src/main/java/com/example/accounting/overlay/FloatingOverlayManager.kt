@@ -12,6 +12,8 @@ import android.view.WindowManager
 import android.view.WindowManager.LayoutParams
 import android.widget.FrameLayout
 import android.widget.TextView
+import androidx.compose.ui.graphics.toArgb
+import com.example.accounting.ui.theme.Purple40
 
 class FloatingOverlayManager(
     private val context: Context,
@@ -54,6 +56,7 @@ class FloatingOverlayManager(
                     initialTouchY = event.rawY
                     true
                 }
+
                 MotionEvent.ACTION_MOVE -> {
                     layoutParams?.let { params ->
                         params.x = initialX + (event.rawX - initialTouchX).toInt()
@@ -62,6 +65,7 @@ class FloatingOverlayManager(
                     }
                     true
                 }
+
                 MotionEvent.ACTION_UP -> {
                     val deltaX = kotlin.math.abs(event.rawX - initialTouchX)
                     val deltaY = kotlin.math.abs(event.rawY - initialTouchY)
@@ -76,6 +80,7 @@ class FloatingOverlayManager(
                     }
                     true
                 }
+
                 else -> false
             }
         }
@@ -100,7 +105,7 @@ class FloatingOverlayManager(
         val background = GradientDrawable().apply {
             shape = GradientDrawable.OVAL
             setSize(100, 100)
-            setColor(Color.parseColor("#6200EE")) // Material primary color
+            setColor(Purple40.toArgb()) // Material primary color
         }
 
         val textView = TextView(context).apply {

@@ -2,10 +2,10 @@ package com.example.accounting.util
 
 import android.content.Context
 import android.content.Intent
-import android.net.Uri
 import android.provider.Settings
 import android.view.accessibility.AccessibilityManager
 import androidx.core.content.getSystemService
+import androidx.core.net.toUri
 
 object PermissionHelper {
     fun checkOverlayPermission(context: Context): Boolean {
@@ -13,7 +13,7 @@ object PermissionHelper {
     }
 
     fun checkAccessibilityPermission(context: Context): Boolean {
-        val accessibilityManager = context.getSystemService<AccessibilityManager>()
+        context.getSystemService<AccessibilityManager>()
             ?: return false
 
         val enabledServices = Settings.Secure.getString(
@@ -22,14 +22,15 @@ object PermissionHelper {
         ) ?: return false
 
         // Check for the disguised service name
-        val serviceName = "${context.packageName}/com.google.android.accessibility.selecttospeak.SelectToSpeakService"
+        val serviceName =
+            "${context.packageName}/com.google.android.accessibility.selecttospeak.SelectToSpeakService"
         return enabledServices.contains(serviceName)
     }
 
     fun requestOverlayPermission(context: Context) {
         val intent = Intent(
             Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
-            Uri.parse("package:${context.packageName}")
+            "package:${context.packageName}".toUri()
         )
         context.startActivity(intent)
     }

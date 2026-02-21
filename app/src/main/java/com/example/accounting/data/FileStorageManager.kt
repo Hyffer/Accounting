@@ -1,13 +1,13 @@
 package com.example.accounting.data
 
 import android.content.Context
+import android.graphics.Rect
 import com.example.accounting.model.InspectionResult
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import com.google.gson.TypeAdapter
 import com.google.gson.stream.JsonReader
 import com.google.gson.stream.JsonWriter
-import android.graphics.Rect
 import java.io.File
 
 class FileStorageManager(private val context: Context) {

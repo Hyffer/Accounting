@@ -48,7 +48,8 @@ object ViewNodeUtils {
 
         fun traverse(currentNode: ViewNodeInfo) {
             if (currentNode.className?.contains("button", ignoreCase = true) == true ||
-                (currentNode.isClickable && currentNode.size < 5)) {
+                (currentNode.isClickable && currentNode.size < 5)
+            ) {
                 result.add(currentNode)
             } else {
                 currentNode.children.forEach { traverse(it) }
@@ -75,7 +76,8 @@ object ViewNodeUtils {
     fun hasText(node: ViewNodeInfo, searchText: String): Boolean {
         fun traverse(currentNode: ViewNodeInfo): Boolean {
             if (currentNode.text?.contains(searchText) == true ||
-                currentNode.contentDescription?.contains(searchText) == true) {
+                currentNode.contentDescription?.contains(searchText) == true
+            ) {
                 return true
             }
             return currentNode.children.any { traverse(it) }

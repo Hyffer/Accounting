@@ -46,7 +46,7 @@ open class ViewInspectionAccessibilityService : AccessibilityService() {
 
         val filter = IntentFilter(INSPECT_ACTION)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            registerReceiver(inspectReceiver, filter, Context.RECEIVER_NOT_EXPORTED)
+            registerReceiver(inspectReceiver, filter, RECEIVER_NOT_EXPORTED)
         } else {
             @Suppress("UnspecifiedRegisterReceiverFlag")
             registerReceiver(inspectReceiver, filter)
@@ -91,7 +91,7 @@ open class ViewInspectionAccessibilityService : AccessibilityService() {
         super.onDestroy()
         try {
             unregisterReceiver(inspectReceiver)
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             // Receiver might not be registered
         }
     }
@@ -155,7 +155,7 @@ open class ViewInspectionAccessibilityService : AccessibilityService() {
                     totalViewCount = viewNodeInfo.size
                 )
 
-                val file = fileStorageManager.saveInspection(result)
+                fileStorageManager.saveInspection(result)
 
                 launch(Dispatchers.Main) {
                     val message = if (result.totalViewCount <= 1) {
