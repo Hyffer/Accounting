@@ -53,6 +53,9 @@ dependencies {
     // JSON serialization
     implementation("com.google.code.gson:gson:2.10.1")
 
+    // Navigation Compose
+    implementation("androidx.navigation:navigation-compose:2.7.7")
+
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
