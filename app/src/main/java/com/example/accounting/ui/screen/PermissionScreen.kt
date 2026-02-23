@@ -29,12 +29,12 @@ import androidx.lifecycle.LifecycleEventObserver
 import com.example.accounting.util.PermissionHelper
 
 @Composable
-fun PermissionRequestScreen(
+fun PermissionScreen(
     onPermissionsGranted: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Scaffold(modifier = modifier.fillMaxSize()) { innerPadding ->
-        PermissionRequestScreenContent(
+        PermissionScreenContent(
             onPermissionsGranted = onPermissionsGranted,
             modifier = Modifier.padding(innerPadding)
         )
@@ -42,7 +42,7 @@ fun PermissionRequestScreen(
 }
 
 @Composable
-fun PermissionRequestScreenContent(
+fun PermissionScreenContent(
     onPermissionsGranted: () -> Unit,
     modifier: Modifier = Modifier
 ) {

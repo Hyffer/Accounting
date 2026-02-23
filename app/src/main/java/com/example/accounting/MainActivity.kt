@@ -10,7 +10,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.example.accounting.ui.screen.MainScreen
-import com.example.accounting.ui.screen.PermissionRequestScreen
+import com.example.accounting.ui.screen.PermissionScreen
 import com.example.accounting.ui.theme.AccountingTheme
 import com.example.accounting.util.PermissionHelper
 
@@ -44,7 +44,7 @@ fun AppNavigation() {
         startDestination = startDestination
     ) {
         composable("permissionRequest") {
-            PermissionRequestScreen(
+            PermissionScreen(
                 onPermissionsGranted = {
                     navController.navigate("main") {
                         popUpTo("permissionRequest") { inclusive = true }

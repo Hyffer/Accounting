@@ -74,8 +74,14 @@ app/src/main/java/com/example/accounting/
 |-- data/
 |   |-- FileStorageManager.kt
 |-- util/
-    |-- PermissionHelper.kt
-    |-- ViewTreeParser.kt
+|   |-- PermissionHelper.kt
+|   |-- ViewTreeParser.kt
+|-- ui/
+    |-- screen/
+        |-- DevScreen.kt
+        |-- MainScreen.kt
+        |-- PermissionScreen.kt
+        |-- RecentScreen.kt
 
 app/src/main/java/com/google/android/accessibility/selecttospeak/
 |-- SelectToSpeakService.kt
@@ -251,11 +257,4 @@ ACTION_UP -> check if moved < 10px, if so trigger click
 
 ### UI
 
-#### `MainActivity.kt`
-Jetpack Compose UI for permission management and service control.
-
-**Workflow:**
-1. On launch: Check permission status
-2. If permissions missing: Show "Grant" buttons
-3. On resume: Re-check permissions (user may have changed settings)
-4. If all granted: Show Start/Stop service buttons
+There is a dedicated file "doc_ui.md" for UI related documentation.
