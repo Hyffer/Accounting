@@ -73,6 +73,14 @@ app/src/main/java/com/example/accounting/
 |   |-- FloatingOverlayManager.kt
 |-- data/
 |   |-- FileStorageManager.kt
+|-- database/
+|   |-- AppDatabase.kt
+|   |-- dao/
+|   |   |-- TransactionDao.kt
+|   |-- converters/
+|       |-- TransactionConverters.kt
+|-- repository/
+|   |-- TransactionRepository.kt
 |-- util/
 |   |-- PermissionHelper.kt
 |   |-- ViewTreeParser.kt
@@ -99,7 +107,7 @@ Data class representing a single view node in the hierarchy. Used for simplifyin
 Represents a captured screen of view. Used for wrapping view tree with metadata for analysis.
 
 #### `model/TransactionInfo.kt`
-**TransactionInfo:** Data model for extracted transaction information. Contains transaction details like amount like timestamp.
+**TransactionInfo:** Data model for extracted transaction information. Contains transaction details like amount and timestamp. Also used as Room entity for persistent storage with auto-generated ID.
 
 **PaymentViewType:** Indicates what type of view (a payment request or a success page) is detected.
 
@@ -181,6 +189,15 @@ Recursively parses AccessibilityNodeInfo into ViewNodeInfo, calculating height a
 
 ### Data Layer
 
+#### SQLite Database
+The application uses Room database for persistent storage of transaction information.
+
+**Components:**
+- **AppDatabase**: Main database class with singleton pattern
+- **TransactionDao**: Data Access Object for CRUD operations on transactions
+- **TransactionConverters**: Handles type conversion of TransactionInfo properties (BigDecimal and PaymentViewType)
+- **TransactionRepository**: Repository pattern implementation for data access
+
 #### `data/FileStorageManager.kt`
 Manages JSON file I/O for inspection results.
 
@@ -210,8 +227,9 @@ Base accessibility service that handles view inspection and payment detection.
 3. Parses view tree using `ViewTreeParser`
 4. Calls `handler.detectPaymentView()` to check if it's a payment view
 5. If payment view detected, calls `handler.extractTransaction()`
-6. Shows notification via `TransactionNotificationManager`
-7. Uses debounce (2 seconds) and hash tracking to prevent duplicates
+6. Saves transaction to Room database for persistent storage
+7. Shows notification via `TransactionNotificationManager`
+8. Uses debounce (2 seconds) and hash tracking to prevent duplicates
 
 **Important:** The class is marked `open` so it can be extended by the disguised service.
 

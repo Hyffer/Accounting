@@ -10,11 +10,13 @@ import android.view.accessibility.AccessibilityEvent
 import android.widget.Toast
 import com.example.accounting.R
 import com.example.accounting.data.FileStorageManager
+import com.example.accounting.database.AppDatabase
 import com.example.accounting.handler.PaymentAppHandlerFactory
 import com.example.accounting.model.InspectionResult
 import com.example.accounting.model.PaymentViewType
 import com.example.accounting.model.TransactionInfo
 import com.example.accounting.notification.TransactionNotificationManager
+import com.example.accounting.repository.TransactionRepository
 import com.example.accounting.util.ViewTreeParser
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -27,6 +29,8 @@ open class ViewInspectionAccessibilityService : AccessibilityService() {
     }
 
     private val fileStorageManager by lazy { FileStorageManager(this) }
+    private val database by lazy { AppDatabase.getDatabase(this) }
+    private val transactionRepository by lazy { TransactionRepository(database) }
     private val scope = CoroutineScope(Dispatchers.Main)
 
     private var lastTransactionHash: Int? = null
@@ -75,6 +79,16 @@ open class ViewInspectionAccessibilityService : AccessibilityService() {
 
             transaction?.let {
                 if (shouldShowNotification(it)) {
+                    // Save transaction to database
+                    scope.launch(Dispatchers.IO) {
+                        try {
+                            transactionRepository.insertTransaction(it)
+                        } catch (e: Exception) {
+                            // Log error but don't prevent notification
+                            e.printStackTrace()
+                        }
+                    }
+
                     TransactionNotificationManager.showNotification(this, it)
                     lastTransactionHash = it.hashCode()
                     lastNotificationTime = System.currentTimeMillis()
