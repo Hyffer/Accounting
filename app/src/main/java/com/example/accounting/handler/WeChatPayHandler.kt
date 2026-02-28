@@ -13,6 +13,7 @@ object WeChatPayHandler : PaymentAppHandler {
         val hasPayButton = ViewNodeUtils.hasButtonWithText(rootNode, "支付")
         val hasSuccessText = ViewNodeUtils.hasText(rootNode, "支付成功")
         val hasCompleteButton = ViewNodeUtils.hasButtonWithText(rootNode, "完成")
+                || ViewNodeUtils.hasButtonWithText(rootNode, "返回商家")
         val hasAmount =
             ViewNodeUtils.collectAllText(rootNode).any { PatternMatcher.containsAmount(it) }
 

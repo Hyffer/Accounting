@@ -71,7 +71,7 @@ object ViewNodeUtils {
 
     /**
      * Checks if there's any node in the hierarchy containing the specified text.
-     * This is a simple text search without button validation.
+     * Both text and content description fields are checked.
      */
     fun hasText(node: ViewNodeInfo, searchText: String): Boolean {
         fun traverse(currentNode: ViewNodeInfo): Boolean {

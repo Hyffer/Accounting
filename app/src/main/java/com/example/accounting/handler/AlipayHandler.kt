@@ -9,14 +9,14 @@ object AlipayHandler : PaymentAppHandler {
     override val packageName = "com.eg.android.AlipayGphone"
 
     override fun detectPaymentView(rootNode: ViewNodeInfo): PaymentViewType {
-        val hasPayTo = ViewNodeUtils.hasText(rootNode, "付款给")
+        val hasPayAmount = ViewNodeUtils.hasText(rootNode, "支付金额")
         val hasConfirmButton = ViewNodeUtils.hasButtonWithText(rootNode, "确认付款")
         val hasSuccessText = ViewNodeUtils.hasText(rootNode, "支付成功")
         val hasCompleteButton = ViewNodeUtils.hasButtonWithText(rootNode, "完成")
 
         return when {
             hasSuccessText && hasCompleteButton -> PaymentViewType.Success
-            hasPayTo && hasConfirmButton -> PaymentViewType.Request
+            hasPayAmount && hasConfirmButton -> PaymentViewType.Request
             else -> PaymentViewType.None
         }
     }
