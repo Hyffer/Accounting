@@ -88,10 +88,12 @@ app/src/main/java/com/example/accounting/
 |   |-- ViewTreeParser.kt
 |-- ui/
     |-- screen/
-        |-- DevScreen.kt
-        |-- MainScreen.kt
-        |-- PermissionScreen.kt
-        |-- RecentScreen.kt
+    |   |-- DevScreen.kt
+    |   |-- MainScreen.kt
+    |   |-- PermissionScreen.kt
+    |   |-- RecentScreen.kt
+    |-- viewmodel/
+        |-- TransactionViewModel.kt
 
 app/src/main/java/com/google/android/accessibility/selecttospeak/
 |-- SelectToSpeakService.kt

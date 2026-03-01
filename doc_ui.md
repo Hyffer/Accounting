@@ -110,7 +110,53 @@ App Launch
 
 ### 4. Recent Tab
 
-Reserved for future transaction history feature
+**Responsibility:** Display and manage recent transactions.
+
+**Features:**
+- Display transactions in a list ordered by timestamp descending, or a "No transactions yet" message
+- Swipe left to delete transaction (with confirmation animation)
+- Swipe right reserved for future action
+
+**Architecture:**
+```
+RecentScreen
+|-- TransactionViewModel (holds StateFlow<List<TransactionInfo>>)
+|-- LazyColumn
+    |-- TransactionItem (Card with swipe gestures)
+        |-- SwipeToDismissBox
+            |-- backgroundContent (colored background with icon)
+            |-- content (transaction details)
+```
+
+**Transaction Item Layout:**
+```
++------------------------------------------+
+| ¥{amount}              {viewType} {time} |
+| {merchant}               {paymentMethod} |
++------------------------------------------+
+```
+
+**UI Diagram:**
+```
++------------------------------------------+
+|         Recent Transactions              |
+|                                          |
+|  +------------------------------------+  |
+|  | ¥25.00             Success  14:30  |  |
+|  | Store Name            Credit card  |  |
+|  +------------------------------------+  |
+|                                          |
+|  +------------------------------------+  |
+|  | ¥100.00            Request  12:15  |  |
+|  | Merchant                           |  |
+|  +------------------------------------+  |
+|                                          |
++------------------------------------------+
+```
+
+**Interaction:**
+- Swipe left (EndToStart): Red background with delete icon, triggers deletion
+- Swipe right (StartToEnd): Green background with check icon, reserved for future action
 
 ---
 
