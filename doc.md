@@ -13,7 +13,9 @@ The application uses **Accessibility Services** to detect payment views on scree
 |       |- onAccessibilityEvent() filters relevant events                 |
 |           |- Uses PaymentAppHandlerFactory to route by package name     |
 |           |- Calls handler.detectPaymentView() and extractTransaction() |
-|           |- Shows notification via TransactionNotificationManager      |
+|           |- Serialized calls to processTransaction()                   |
+|               |- Deduplication, matching and database updating          |
+|               |- Shows notification via TransactionNotificationManager  |
 +-------------------------------------------------------------------------+
 ```
 
@@ -220,6 +222,7 @@ Base accessibility service that handles view inspection and payment detection.
 1. **BroadcastReceiver** - Listens for `INSPECT_ACTION` broadcast
 2. **performInspection()** - Captures and saves view tree
 3. **onAccessibilityEvent()** - Real-time payment detection and extraction
+4. **processTransaction()** - transaction deduplication and matching
 
 **Payment Detection Flow:**
 1. Receives `WINDOW_CONTENT_CHANGED` or `WINDOW_STATE_CHANGED` events
@@ -227,9 +230,9 @@ Base accessibility service that handles view inspection and payment detection.
 3. Parses view tree using `ViewTreeParser`
 4. Calls `handler.detectPaymentView()` to check if it's a payment view
 5. If payment view detected, calls `handler.extractTransaction()`
-6. Saves transaction to Room database for persistent storage
-7. Shows notification via `TransactionNotificationManager`
-8. Uses debounce (2 seconds) and hash tracking to prevent duplicates
+6. Searches database for recent transactions to prevent duplicates
+7. Saves transaction to database
+8. Shows notification via `TransactionNotificationManager`
 
 **Important:** The class is marked `open` so it can be extended by the disguised service.
 

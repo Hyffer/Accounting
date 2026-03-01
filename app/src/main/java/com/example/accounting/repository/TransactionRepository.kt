@@ -28,4 +28,8 @@ class TransactionRepository(private val database: AppDatabase) {
     suspend fun deleteAllTransactions() {
         database.transactionDao().deleteAllTransactions()
     }
+
+    suspend fun getTransactionsAfter(minTimestamp: Long): List<TransactionInfo> {
+        return database.transactionDao().getTransactionsAfter(minTimestamp)
+    }
 }

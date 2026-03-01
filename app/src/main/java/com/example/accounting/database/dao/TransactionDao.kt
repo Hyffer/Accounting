@@ -27,4 +27,7 @@ interface TransactionDao {
 
     @Query("DELETE FROM transactions")
     suspend fun deleteAllTransactions()
+
+    @Query("SELECT * FROM transactions WHERE timestamp >= :minTimestamp ORDER BY timestamp DESC")
+    suspend fun getTransactionsAfter(minTimestamp: Long): List<TransactionInfo>
 }

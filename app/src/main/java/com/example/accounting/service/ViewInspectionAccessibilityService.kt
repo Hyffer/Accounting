@@ -15,27 +15,29 @@ import com.example.accounting.handler.PaymentAppHandlerFactory
 import com.example.accounting.model.InspectionResult
 import com.example.accounting.model.PaymentViewType
 import com.example.accounting.model.TransactionInfo
+import com.example.accounting.model.isDuplicate
+import com.example.accounting.model.isMatchingRequest
 import com.example.accounting.notification.TransactionNotificationManager
 import com.example.accounting.repository.TransactionRepository
 import com.example.accounting.util.ViewTreeParser
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 open class ViewInspectionAccessibilityService : AccessibilityService() {
 
     companion object {
         const val INSPECT_ACTION = "com.example.accounting.INSPECT_ACTION"
+        private const val DUPLICATE_WINDOW_MS = 60_000L // 1 minute
     }
 
     private val fileStorageManager by lazy { FileStorageManager(this) }
     private val database by lazy { AppDatabase.getDatabase(this) }
     private val transactionRepository by lazy { TransactionRepository(database) }
     private val scope = CoroutineScope(Dispatchers.Main)
-
-    private var lastTransactionHash: Int? = null
-    private var lastNotificationTime: Long = 0
-    private val debounceMs = 2000L
+    private val processMutex = Mutex()
 
     private val inspectReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
@@ -78,23 +80,54 @@ open class ViewInspectionAccessibilityService : AccessibilityService() {
             val transaction = handler.extractTransaction(viewNodeInfo, viewType)
 
             transaction?.let {
-                if (shouldShowNotification(it)) {
-                    // Save transaction to database
-                    scope.launch(Dispatchers.IO) {
-                        try {
-                            transactionRepository.insertTransaction(it)
-                        } catch (e: Exception) {
-                            // Log error but don't prevent notification
-                            e.printStackTrace()
-                        }
+                scope.launch(Dispatchers.IO) {
+                    processMutex.withLock {
+                        processTransaction(it)
                     }
-
-                    TransactionNotificationManager.showNotification(this, it)
-                    lastTransactionHash = it.hashCode()
-                    lastNotificationTime = System.currentTimeMillis()
                 }
             }
         }
+    }
+
+    /**
+     * Process a newly detected transaction:
+     * 1. Check for duplicates in database (transactions in the past minute)
+     * 2. If Success view, check for matching Request to update
+     * 3. If neither, save as new transaction and show notification
+     */
+    private suspend fun processTransaction(transaction: TransactionInfo) {
+        val minTimestamp = transaction.timestamp - DUPLICATE_WINDOW_MS
+        val recentTransactions = transactionRepository.getTransactionsAfter(minTimestamp)
+
+        // Check for duplicate
+        val duplicate = recentTransactions.find { existing ->
+            transaction.isDuplicate(existing)
+        }
+        if (duplicate != null) {
+            // Duplicate found, discard
+            return
+        }
+
+        // If Success view, check for matching Request to update
+        if (transaction.viewType == PaymentViewType.Success) {
+            val matchingRequest = recentTransactions.find { existing ->
+                transaction.isMatchingRequest(existing)
+            }
+            if (matchingRequest != null) {
+                // Update existing Request with Success info
+                val updated = matchingRequest.copy(
+                    viewType = PaymentViewType.Success,
+                    timestamp = transaction.timestamp
+                )
+                transactionRepository.updateTransaction(updated)
+                TransactionNotificationManager.showNotification(this, updated)
+                return
+            }
+        }
+
+        // New transaction - save and notify
+        transactionRepository.insertTransaction(transaction)
+        TransactionNotificationManager.showNotification(this, transaction)
     }
 
     override fun onInterrupt() {
@@ -108,22 +141,6 @@ open class ViewInspectionAccessibilityService : AccessibilityService() {
         } catch (_: Exception) {
             // Receiver might not be registered
         }
-    }
-
-    private fun shouldShowNotification(transaction: TransactionInfo): Boolean {
-        val now = System.currentTimeMillis()
-        val timeSinceLast = now - lastNotificationTime
-
-        if (timeSinceLast < debounceMs) {
-            return false
-        }
-
-        val currentHash = transaction.hashCode()
-        if (currentHash == lastTransactionHash) {
-            return false
-        }
-
-        return true
     }
 
     private fun performInspection() {
