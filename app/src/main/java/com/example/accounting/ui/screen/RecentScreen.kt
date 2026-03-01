@@ -16,7 +16,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.Card
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SwipeToDismissBox
@@ -68,6 +67,7 @@ fun RecentScreen(
             }
         } else {
             LazyColumn(
+                modifier = Modifier.fillMaxSize(),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 items(
@@ -76,7 +76,8 @@ fun RecentScreen(
                 ) { transaction ->
                     TransactionItem(
                         transaction = transaction,
-                        onDelete = { viewModel.deleteTransaction(transaction) }
+                        onDelete = { viewModel.deleteTransaction(transaction) },
+                        modifier = Modifier.animateItem()
                     )
                 }
             }
@@ -84,7 +85,6 @@ fun RecentScreen(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun TransactionItem(
     transaction: TransactionInfo,
