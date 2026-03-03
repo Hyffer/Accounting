@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
+import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
@@ -61,9 +62,9 @@ fun MainScreen(
         }
     }
 
-    // Back button behavior: Dev tab → Recent tab, Recent tab → exit app
-    BackHandler(enabled = selectedTabIndex == 1) {
-        selectedTabIndex = 0
+    // Back button behavior: Dev tab → Config tab, Config tab → Recent tab, Recent tab → exit app
+    BackHandler(enabled = selectedTabIndex > 0) {
+        selectedTabIndex--
     }
 
     Scaffold(
@@ -85,7 +86,15 @@ fun MainScreen(
                     selected = selectedTabIndex == 1,
                     onClick = { selectedTabIndex = 1 },
                     icon = {
-                        Icon(imageVector = Icons.Default.Settings, contentDescription = "Dev")
+                        Icon(imageVector = Icons.Default.Settings, contentDescription = "Config")
+                    },
+                    label = { Text("Config") }
+                )
+                NavigationBarItem(
+                    selected = selectedTabIndex == 2,
+                    onClick = { selectedTabIndex = 2 },
+                    icon = {
+                        Icon(imageVector = Icons.Default.Build, contentDescription = "Dev")
                     },
                     label = { Text("Dev") }
                 )
@@ -97,7 +106,11 @@ fun MainScreen(
                 modifier = Modifier.padding(innerPadding)
             )
 
-            1 -> DevScreen(
+            1 -> ConfigScreen(
+                modifier = Modifier.padding(innerPadding)
+            )
+
+            2 -> DevScreen(
                 modifier = Modifier.padding(innerPadding)
             )
         }
