@@ -1,0 +1,2 @@
+This is an Android application that automatically keeps accounts when user pays bills.
+The project documentation is "doc.md", ui specific documentation is "doc_ui.md" and backend api documentation is "doc_api.md".

@@ -1,5 +1,6 @@
 package com.example.accounting.ui.screen
 
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -23,12 +24,18 @@ import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -36,6 +43,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.accounting.model.PaymentViewType
 import com.example.accounting.model.TransactionInfo
 import com.example.accounting.ui.viewmodel.TransactionViewModel
+import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -77,6 +85,7 @@ fun RecentScreen(
                     TransactionItem(
                         transaction = transaction,
                         onDelete = { viewModel.deleteTransaction(transaction) },
+                        onUpload = { viewModel.uploadTransaction(transaction) },
                         modifier = Modifier.animateItem()
                     )
                 }
@@ -89,30 +98,44 @@ fun RecentScreen(
 private fun TransactionItem(
     transaction: TransactionInfo,
     onDelete: () -> Unit,
+    onUpload: suspend () -> Result<Unit>,
     modifier: Modifier = Modifier
 ) {
+    val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
+    var busy by rememberSaveable { mutableStateOf(false) }
+
     val dismissState = rememberSwipeToDismissBoxState(
         confirmValueChange = { dismissValue ->
             when (dismissValue) {
-                SwipeToDismissBoxValue.EndToStart -> {
-                    onDelete()
-                    true
-                }
-
-                SwipeToDismissBoxValue.StartToEnd -> {
-                    // Reserved for future action
-                    false
-                }
-
-                SwipeToDismissBoxValue.Settled -> false
+                SwipeToDismissBoxValue.EndToStart -> onDelete()
+                SwipeToDismissBoxValue.StartToEnd -> busy = true // handled via LaunchedEffect
+                SwipeToDismissBoxValue.Settled -> busy = false
             }
+            true
         },
         positionalThreshold = { totalDistance -> totalDistance * 0.4f }
     )
 
+    // Handle swipe-right for uploading
+    LaunchedEffect(dismissState.currentValue) {
+        if (dismissState.currentValue == SwipeToDismissBoxValue.StartToEnd) {
+            onUpload()
+                .onSuccess { onDelete() }
+                .onFailure { e ->
+                    // Reset state and show toast (use coroutineScope to avoid circular dependency)
+                    coroutineScope.launch {
+                        dismissState.reset()
+                    }
+                    Toast.makeText(context, e.toString(), Toast.LENGTH_SHORT).show()
+                }
+        }
+    }
+
     SwipeToDismissBox(
         state = dismissState,
         modifier = modifier,
+        gesturesEnabled = !busy,
         backgroundContent = {
             val roundedShape = RoundedCornerShape(12.dp)    // match Card's rounded corners
             val concentration = when (dismissState.targetValue) {
