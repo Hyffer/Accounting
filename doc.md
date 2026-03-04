@@ -86,14 +86,22 @@ app/src/main/java/com/example/accounting/
 |-- util/
 |   |-- PermissionHelper.kt
 |   |-- ViewTreeParser.kt
+|-- api/
+|   |-- ApiClient.kt
+|   |-- ApiException.kt
+|   |-- TransactionApi.kt
+|-- datastore/
+|   |-- ConfigDataStore.kt
 |-- ui/
     |-- screen/
     |   |-- DevScreen.kt
     |   |-- MainScreen.kt
     |   |-- PermissionScreen.kt
     |   |-- RecentScreen.kt
+    |   |-- ConfigScreen.kt
     |-- viewmodel/
         |-- TransactionViewModel.kt
+        |-- ConfigViewModel.kt
 
 app/src/main/java/com/google/android/accessibility/selecttospeak/
 |-- SelectToSpeakService.kt
@@ -212,6 +220,13 @@ Manages JSON file I/O for inspection results.
 - `getInspectionFiles()`: Returns list of all inspection files, newest first
 - `deleteInspection(file)`: Deletes a specific inspection file
 
+#### `datastore/ConfigDataStore.kt`
+DataStore-based repository for storing key-value pairs.
+
+**Keys:**
+- `backend_url`: Base URL of the API server
+- `auth_token`: Authentication token for API requests
+
 ---
 
 ### Accessibility Service
@@ -275,6 +290,24 @@ ACTION_DOWN -> record initial position
 ACTION_MOVE -> update window position
 ACTION_UP -> check if moved < 10px, if so trigger click
 ```
+
+---
+
+### Backend API
+
+The application integrates with a backend server for cloud storage of transactions. The backend integration consists of:
+
+**Components:**
+- **ApiClient**: Singleton OkHttpClient with configured timeouts (3 seconds for connect/read/write)
+- **ApiException**: Sealed class for API errors (ConfigMissingException, ResponseException)
+- **TransactionApi**: Handles HTTP POST requests to upload transactions to backend
+
+**TransactionApi.postTransaction():**
+1. Reads URL and TOKEN from ConfigDataStore
+2. If params missing, throws `ConfigMissingException`
+3. Builds request to `${URL}/transaction_info` with Bearer token authentication
+4. Sends transaction data as JSON (amount, merchant, payment_method, occurred_at)
+5. Expects HTTP 201 response; throws `ResponseException` otherwise
 
 ---
 

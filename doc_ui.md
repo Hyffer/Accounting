@@ -15,6 +15,7 @@ AppNavigation
 |-- PermissionScreen
 |-- MainScreen
     |-- RecentScreen
+    |-- ConfigScreen
     |-- DevScreen
 ```
 
@@ -30,7 +31,8 @@ App Launch
     └── All Granted ──────────> Main Screen
                                     │
                                     ├── Tab 0: Recent Screen
-                                    └── Tab 1: Dev Screen
+                                    ├── Tab 1: Config Screen
+                                    └── Tab 2: Dev Screen
 ```
 
 ---
@@ -88,13 +90,13 @@ App Launch
 |  +------------------------------------+  |
 |  |                                    |  |
 |  |      Tab Content Area              |  |
-|  |      (RecentTab or DevTab)         |  |
+|  |   (Recent, Config, or Dev)         |  |
 |  |                                    |  |
 |  |                                    |  |
 |  +------------------------------------+  |
 |                                          |
 |  +------------------------------------+  |
-|  |    [Recent]      |     [Dev]       |  |
+|  |  [Recent]  |  [Config]  |  [Dev]   |  |
 |  +------------------------------------+  |
 +------------------------------------------+
 ```
@@ -102,20 +104,49 @@ App Launch
 **Navigation Logic:**
 - Host current tab content
 - Back button behavior:
-    - If on Dev tab → go to Recent tab
+    - If on Dev tab → go to Config tab
+    - If on Config tab → go to Recent tab
     - If on Recent tab → exit app
     - If permissions revoked → return to Permission Screen
 
 ---
 
-### 4. Recent Tab
+### 4. Config Tab, ConfigViewModel
+
+**Responsibility:** Configure backend server connection parameters.
+
+**UI Diagram:**
+```
++------------------------------------------+
+|                                          |
+|  Card: Backend Configuration             |
+|  +------------------------------------+  |
+|  | Server URL                         |  |
+|  | [________________________]         |  |
+|  |                                    |  |
+|  | Auth Token                         |  |
+|  | [________________________]         |  |
+|  |                                    |  |
+|  |                    [Save Config]   |  |
+|  +------------------------------------+  |
+|                                          |
++------------------------------------------+
+```
+
+**Behavior:**
+- Loads existing config on screen start
+- Save button persists URL and TOKEN to DataStore
+
+---
+
+### 5. Recent Tab, TransactionViewModel
 
 **Responsibility:** Display and manage recent transactions.
 
 **Features:**
 - Display transactions in a list ordered by timestamp descending, or a "No transactions yet" message
-- Swipe left to delete transaction (with confirmation animation)
-- Swipe right reserved for future action
+- Swipe left to delete transaction
+- Swipe right to upload transaction to backend server
 
 **Architecture:**
 ```
@@ -156,11 +187,14 @@ RecentScreen
 
 **Interaction:**
 - Swipe left (EndToStart): Red background with delete icon, triggers deletion
-- Swipe right (StartToEnd): Green background with check icon, reserved for future action
+- Swipe right (StartToEnd): Green background with check icon, triggers upload
+    - On success: Transaction is deleted from local database
+    - On failure: Error toast shown, item resets to settled position
+    - While uploading: Swipe gestures disabled until operation completes
 
 ---
 
-### 5. Dev Tab
+### 6. Dev Tab
 
 **Responsibility:** Inspection service management.
 
