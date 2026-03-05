@@ -1,7 +1,14 @@
 package com.example.accounting.ui.screen
 
 import android.widget.Toast
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -28,6 +35,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -54,41 +62,81 @@ fun RecentScreen(
     viewModel: TransactionViewModel = viewModel()
 ) {
     val transactions by viewModel.transactions.collectAsState()
+    val focusedTransaction by viewModel.focusedTransaction.collectAsState()
 
-    Column(
-        modifier = modifier
-            .fillMaxSize()
-            .padding(16.dp)
-    ) {
-        if (transactions.isEmpty()) {
-            Column(
-                modifier = Modifier.fillMaxSize(),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center
-            ) {
-                Text(
-                    text = "No transactions yet",
-                    style = MaterialTheme.typography.bodyLarge,
-                    textAlign = TextAlign.Center,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-        } else {
-            LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                items(
-                    items = transactions,
-                    key = { it.id }
-                ) { transaction ->
-                    TransactionItem(
-                        transaction = transaction,
-                        onDelete = { viewModel.deleteTransaction(transaction) },
-                        onUpload = { viewModel.uploadTransaction(transaction) },
-                        modifier = Modifier.animateItem()
+    val coroutineScope = rememberCoroutineScope()
+
+    Box(modifier = modifier.fillMaxSize()) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(16.dp)
+        ) {
+            if (transactions.isEmpty()) {
+                Column(
+                    modifier = Modifier.fillMaxSize(),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    Text(
+                        text = "No transactions yet",
+                        style = MaterialTheme.typography.bodyLarge,
+                        textAlign = TextAlign.Center,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
+            } else {
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    items(
+                        items = transactions,
+                        key = { it.id }
+                    ) { transaction ->
+                        TransactionItem(
+                            transaction = transaction,
+                            onDelete = { viewModel.deleteTransaction(transaction) },
+                            onUpload = { viewModel.uploadTransaction(transaction) },
+                            onEdit = { uploadCallback ->
+                                viewModel.focusTransaction(transaction, uploadCallback)
+                            },
+                            modifier = Modifier.animateItem()
+                        )
+                    }
+                }
+            }
+        }
+
+        // Edit Transaction Screen Overlay
+        AnimatedVisibility(
+            visible = focusedTransaction != null,
+            enter = slideInVertically(initialOffsetY = { it }) + fadeIn(),
+            exit = slideOutVertically(targetOffsetY = { it }) + fadeOut()
+        ) {
+            focusedTransaction?.let { transaction ->
+                EditTransactionScreen(
+                    transaction = transaction,
+                    onDismiss = { updatedTransactionOrNull ->
+                        coroutineScope.launch {
+                            updatedTransactionOrNull?.let { viewModel.updateTransaction(it) }
+                            viewModel.defocusTransaction()
+                        }
+                    },
+                    onUpload = { updatedTransaction ->
+                        coroutineScope.launch {
+                            viewModel.updateTransaction(updatedTransaction)
+                            // Trigger upload BEFORE defocusing (which clears the callback)
+                            viewModel.triggerFocusedUpload(updatedTransaction)
+                            viewModel.defocusTransaction()
+                        }
+                    },
+                    onDelete = { transactionToDelete ->
+                        viewModel.deleteTransaction(transactionToDelete)
+                        viewModel.defocusTransaction()
+                    },
+                    modifier = Modifier.fillMaxSize()
+                )
             }
         }
     }
@@ -99,6 +147,7 @@ private fun TransactionItem(
     transaction: TransactionInfo,
     onDelete: () -> Unit,
     onUpload: suspend () -> Result<Unit>,
+    onEdit: ((TransactionInfo) -> Unit) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -179,7 +228,21 @@ private fun TransactionItem(
         }
     ) {
         Card(
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null,
+                    enabled = !busy,
+                    onClick = {
+                        // Pass a callback that triggers uploading the updated transaction
+                        onEdit { updatedTransactionToUpload ->
+                            coroutineScope.launch {
+                                dismissState.dismiss(SwipeToDismissBoxValue.StartToEnd)
+                            }
+                        }
+                    }
+                )
         ) {
             Column(
                 modifier = Modifier
