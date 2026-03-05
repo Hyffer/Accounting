@@ -15,6 +15,7 @@ AppNavigation
 |-- PermissionScreen
 |-- MainScreen
     |-- RecentScreen
+    |   |-- EditTransactionScreen
     |-- ConfigScreen
     |-- DevScreen
 ```
@@ -111,7 +112,7 @@ App Launch
 
 ---
 
-### 4. Config Tab, ConfigViewModel
+### 4. Config Tab (ConfigViewModel)
 
 **Responsibility:** Configure backend server connection parameters.
 
@@ -139,24 +140,27 @@ App Launch
 
 ---
 
-### 5. Recent Tab, TransactionViewModel
+### 5. Recent Tab (TransactionViewModel)
 
 **Responsibility:** Display and manage recent transactions.
 
 **Features:**
 - Display transactions in a list ordered by timestamp descending, or a "No transactions yet" message
+- Click transaction to edit
 - Swipe left to delete transaction
 - Swipe right to upload transaction to backend server
 
 **Architecture:**
 ```
 RecentScreen
-|-- TransactionViewModel (holds StateFlow<List<TransactionInfo>>)
-|-- LazyColumn
-    |-- TransactionItem (Card with swipe gestures)
-        |-- SwipeToDismissBox
-            |-- backgroundContent (colored background with icon)
-            |-- content (transaction details)
+|-- Box
+    |-- LazyColumn
+    |   |-- TransactionItem (Card with swipe gestures)
+    |       |-- SwipeToDismissBox
+    |           |-- backgroundContent (colored background with icon)
+    |           |-- content (transaction details)
+    |-- AnimatedVisibility
+        |-- EditTransactionScreen
 ```
 
 **Transaction Item Layout:**
@@ -186,6 +190,7 @@ RecentScreen
 ```
 
 **Interaction:**
+- Click: Opens EditTransactionScreen stacking on top for editing the transaction
 - Swipe left (EndToStart): Red background with delete icon, triggers deletion
 - Swipe right (StartToEnd): Green background with check icon, triggers upload
     - On success: Transaction is deleted from local database
@@ -194,7 +199,47 @@ RecentScreen
 
 ---
 
-### 6. Dev Tab
+### 6. Edit Screen (TransactionViewModel)
+
+**Responsibility:** Edit transaction properties.
+
+**Features:**
+- Editable fields: amount, optional divisor, merchant, payment method, timestamp, view type
+- Amount divisor for splitting bills (final amount = amount / divisor)
+- Appropriate input methods: numeric keyboard for amount, date and time picker for timestamp, SegmentedButton for view type
+- Real-time validation with visual indication and error messages
+
+**UI Diagram:**
+```
++------------------------------------------+
+|         Edit Transaction                 |
+|                                          |
+|  +------------------------------------+  |
+|  | [Amount] ÷ [Divisor]               |  |
+|  | Result: ¥{calculated}              |  |
+|  +------------------------------------+  |
+|                                          |
+|  Merchant: [__________________________]  |
+|                                          |
+|  Payment Method: [____________________]  |
+|                                          |
+|  Timestamp: [2024-01-15 14:30] [📅][🕐]  |
+|                                          |
+|  View Type: [Success] | [Request]        |
+|                                          |
+|  [✓ Upload]        [🗑 Delete]           |
++------------------------------------------+
+```
+
+**Behavior:**
+- Loads existing transaction values as defaults
+- Navigation back: saves valid changes and returns to Recent Tab
+- Upload button: saves changes, triggers swipe-right interaction on item and returns to Recent Tab
+- Delete button: deletes transaction and returns to Recent Tab
+
+---
+
+### 7. Dev Tab
 
 **Responsibility:** Inspection service management.
 

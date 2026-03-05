@@ -98,6 +98,7 @@ app/src/main/java/com/example/accounting/
     |   |-- MainScreen.kt
     |   |-- PermissionScreen.kt
     |   |-- RecentScreen.kt
+    |   |-- EditTransactionScreen.kt
     |   |-- ConfigScreen.kt
     |-- viewmodel/
         |-- TransactionViewModel.kt
