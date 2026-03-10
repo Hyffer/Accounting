@@ -104,11 +104,7 @@ App Launch
 
 **Navigation Logic:**
 - Host current tab content
-- Back button behavior:
-    - If on Dev tab → go to Config tab
-    - If on Config tab → go to Recent tab
-    - If on Recent tab → exit app
-    - If permissions revoked → return to Permission Screen
+- If permissions revoked, return to Permission Screen
 
 ---
 

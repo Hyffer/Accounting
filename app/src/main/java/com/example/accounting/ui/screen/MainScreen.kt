@@ -1,7 +1,6 @@
 package com.example.accounting.ui.screen
 
 import androidx.activity.ComponentActivity
-import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
@@ -60,11 +59,6 @@ fun MainScreen(
         onDispose {
             lifecycleOwner.lifecycle.removeObserver(observer)
         }
-    }
-
-    // Back button behavior: Dev tab → Config tab, Config tab → Recent tab, Recent tab → exit app
-    BackHandler(enabled = selectedTabIndex > 0) {
-        selectedTabIndex--
     }
 
     Scaffold(
