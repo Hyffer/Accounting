@@ -1,6 +1,5 @@
 package com.example.accounting.ui.screen
 
-import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -34,16 +33,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -51,7 +45,6 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.accounting.model.PaymentViewType
 import com.example.accounting.model.TransactionInfo
 import com.example.accounting.ui.viewmodel.TransactionViewModel
-import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -63,8 +56,7 @@ fun RecentScreen(
 ) {
     val transactions by viewModel.transactions.collectAsState()
     val focusedTransaction by viewModel.focusedTransaction.collectAsState()
-
-    val coroutineScope = rememberCoroutineScope()
+    val uploadingIds by viewModel.uploadingIds.collectAsState()
 
     Box(modifier = modifier.fillMaxSize()) {
         Column(
@@ -96,11 +88,10 @@ fun RecentScreen(
                     ) { transaction ->
                         TransactionItem(
                             transaction = transaction,
+                            isUploading = transaction.id in uploadingIds,
                             onDelete = { viewModel.deleteTransaction(transaction) },
-                            onUpload = { viewModel.uploadTransaction(transaction) },
-                            onEdit = { uploadCallback ->
-                                viewModel.focusTransaction(transaction, uploadCallback)
-                            },
+                            onUpload = { viewModel.uploadThenDeleteTransaction(transaction) },
+                            onEdit = { viewModel.focusTransaction(transaction) },
                             modifier = Modifier.animateItem()
                         )
                     }
@@ -118,18 +109,13 @@ fun RecentScreen(
                 EditTransactionScreen(
                     transaction = transaction,
                     onDismiss = { updatedTransactionOrNull ->
-                        coroutineScope.launch {
-                            updatedTransactionOrNull?.let { viewModel.updateTransaction(it) }
-                            viewModel.defocusTransaction()
-                        }
+                        updatedTransactionOrNull?.let { viewModel.updateTransaction(it) }
+                        viewModel.defocusTransaction()
                     },
                     onUpload = { updatedTransaction ->
-                        coroutineScope.launch {
-                            viewModel.updateTransaction(updatedTransaction)
-                            // Trigger upload BEFORE defocusing (which clears the callback)
-                            viewModel.triggerFocusedUpload(updatedTransaction)
-                            viewModel.defocusTransaction()
-                        }
+                        viewModel.updateTransaction(updatedTransaction)
+                        viewModel.uploadThenDeleteTransaction(updatedTransaction)
+                        viewModel.defocusTransaction()
                     },
                     onDelete = { transactionToDelete ->
                         viewModel.deleteTransaction(transactionToDelete)
@@ -145,46 +131,38 @@ fun RecentScreen(
 @Composable
 private fun TransactionItem(
     transaction: TransactionInfo,
+    isUploading: Boolean,
     onDelete: () -> Unit,
-    onUpload: suspend () -> Result<Unit>,
-    onEdit: ((TransactionInfo) -> Unit) -> Unit,
+    onUpload: () -> Unit,
+    onEdit: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val context = LocalContext.current
-    val coroutineScope = rememberCoroutineScope()
-    var busy by rememberSaveable { mutableStateOf(false) }
-
     val dismissState = rememberSwipeToDismissBoxState(
+        initialValue =
+            if (isUploading) SwipeToDismissBoxValue.StartToEnd
+            else SwipeToDismissBoxValue.Settled,
         confirmValueChange = { dismissValue ->
             when (dismissValue) {
                 SwipeToDismissBoxValue.EndToStart -> onDelete()
-                SwipeToDismissBoxValue.StartToEnd -> busy = true // handled via LaunchedEffect
-                SwipeToDismissBoxValue.Settled -> busy = false
+                SwipeToDismissBoxValue.StartToEnd -> onUpload()
+                SwipeToDismissBoxValue.Settled -> {}
             }
             true
         },
         positionalThreshold = { totalDistance -> totalDistance * 0.4f }
     )
 
-    // Handle swipe-right for uploading
-    LaunchedEffect(dismissState.currentValue) {
-        if (dismissState.currentValue == SwipeToDismissBoxValue.StartToEnd) {
-            onUpload()
-                .onSuccess { onDelete() }
-                .onFailure { e ->
-                    // Reset state and show toast (use coroutineScope to avoid circular dependency)
-                    coroutineScope.launch {
-                        dismissState.reset()
-                    }
-                    Toast.makeText(context, e.toString(), Toast.LENGTH_SHORT).show()
-                }
-        }
+    LaunchedEffect(isUploading) {
+        if (isUploading && dismissState.currentValue != SwipeToDismissBoxValue.StartToEnd)
+            dismissState.dismiss(SwipeToDismissBoxValue.StartToEnd)
+        if (!isUploading && dismissState.currentValue == SwipeToDismissBoxValue.StartToEnd)
+            dismissState.reset()
     }
 
     SwipeToDismissBox(
         state = dismissState,
         modifier = modifier,
-        gesturesEnabled = !busy,
+        gesturesEnabled = !isUploading,
         backgroundContent = {
             val roundedShape = RoundedCornerShape(12.dp)    // match Card's rounded corners
             val concentration = when (dismissState.targetValue) {
@@ -233,15 +211,8 @@ private fun TransactionItem(
                 .clickable(
                     interactionSource = remember { MutableInteractionSource() },
                     indication = null,
-                    enabled = !busy,
-                    onClick = {
-                        // Pass a callback that triggers uploading the updated transaction
-                        onEdit { updatedTransactionToUpload ->
-                            coroutineScope.launch {
-                                dismissState.dismiss(SwipeToDismissBoxValue.StartToEnd)
-                            }
-                        }
-                    }
+                    enabled = !isUploading,
+                    onClick = onEdit
                 )
         ) {
             Column(

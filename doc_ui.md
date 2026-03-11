@@ -38,6 +38,47 @@ App Launch
 
 ---
 
+## View Models
+
+### 1. ConfigViewModel
+
+**Responsibility:** Manage backend server configuration state.
+
+**State:**
+- `url: StateFlow<String>` - Backend server URL
+- `token: StateFlow<String>` - Authentication token
+
+**Actions:**
+- `loadConfig()` - Load existing configuration from DataStore
+- `saveConfig()` - Persist configuration to DataStore
+
+---
+
+### 2. TransactionViewModel
+
+**Responsibility:** Manage transaction list, edit state, and upload operations.
+
+**State:**
+- `transactions: StateFlow<List<TransactionInfo>>` - All transactions ordered by timestamp descending
+- `focusedTransaction: StateFlow<TransactionInfo?>` - Currently selected transaction for editing
+- `uploadingIds: StateFlow<Set<Long>>` - IDs of transactions currently being uploaded
+
+**Actions:**
+- `focusTransaction(TransactionInfo)` - Set a transaction as focused for editing
+- `defocusTransaction()` - Clear the focused transaction
+- `updateTransaction(TransactionInfo)` - Update a transaction in the database
+- `deleteTransaction(TransactionInfo)` - Delete a transaction from the database
+- `uploadThenDeleteTransaction(TransactionInfo)` - Upload transaction to backend and delete on success
+
+**Upload State Management:**
+- Upload state is tracked in `uploadingIds` using a `Set<Long>`
+- Thread-safe atomic updates using `MutableStateFlow.update { }`
+- Prevents duplicate uploads for the same transaction
+- Upload progress persists across navigation (ViewModel lifecycle)
+- On upload failure, a toast is shown using application context
+
+---
+
 ## Detailed Component Design
 
 ### 1. MainActivity (Navigation Controller)
@@ -108,7 +149,7 @@ App Launch
 
 ---
 
-### 4. Config Tab (ConfigViewModel)
+### 4. Config Tab
 
 **Responsibility:** Configure backend server connection parameters.
 
@@ -136,7 +177,7 @@ App Launch
 
 ---
 
-### 5. Recent Tab (TransactionViewModel)
+### 5. Recent Tab
 
 **Responsibility:** Display and manage recent transactions.
 
@@ -191,11 +232,11 @@ RecentScreen
 - Swipe right (StartToEnd): Green background with check icon, triggers upload
     - On success: Transaction is deleted from local database
     - On failure: Error toast shown, item resets to settled position
-    - While uploading: Swipe gestures disabled until operation completes
+    - While uploading: Item stays in swiped position, gestures disabled until operation completes
 
 ---
 
-### 6. Edit Screen (TransactionViewModel)
+### 6. Edit Screen
 
 **Responsibility:** Edit transaction properties.
 
@@ -230,7 +271,7 @@ RecentScreen
 **Behavior:**
 - Loads existing transaction values as defaults
 - Navigation back: saves valid changes and returns to Recent Tab
-- Upload button: saves changes, triggers swipe-right interaction on item and returns to Recent Tab
+- Upload button: saves changes, triggers upload and returns to Recent Tab
 - Delete button: deletes transaction and returns to Recent Tab
 
 ---
