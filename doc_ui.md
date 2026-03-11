@@ -11,13 +11,25 @@ This documentation illustrates UI design and user interaction.
 ### Component Structure
 
 ```
-AppNavigation
+MainActivity (NavHost)
 |-- PermissionScreen
-|-- MainScreen
-    |-- RecentScreen
+|-- MainScreen (NavHost)
+    |-- RecentScreen (NavHost)
+    |   |-- TransactionList
     |   |-- EditTransactionScreen
     |-- ConfigScreen
     |-- DevScreen
+```
+
+### Navigation Architecture
+
+The app uses **Jetpack Navigation Compose** with nested NavHost for hierarchical navigation. This enables direct navigation to any screen via URI deep links.
+
+Route constants are defined at `ui/navigation/Routes.kt`.
+
+**Deep Link URIs:**
+```
+app://com.example.accounting/recent/{transactionId}  -> Edit transaction with specific ID
 ```
 
 ### Navigation Flow Diagram
@@ -32,6 +44,8 @@ App Launch
     └── All Granted ──────────> Main Screen
                                     │
                                     ├── Tab 0: Recent Screen
+                                    │             ├── Transaction List
+                                    │             └── Transaction Edit Screen
                                     ├── Tab 1: Config Screen
                                     └── Tab 2: Dev Screen
 ```
@@ -56,16 +70,13 @@ App Launch
 
 ### 2. TransactionViewModel
 
-**Responsibility:** Manage transaction list, edit state, and upload operations.
+**Responsibility:** Manage transaction list and upload operations.
 
 **State:**
 - `transactions: StateFlow<List<TransactionInfo>>` - All transactions ordered by timestamp descending
-- `focusedTransaction: StateFlow<TransactionInfo?>` - Currently selected transaction for editing
 - `uploadingIds: StateFlow<Set<Long>>` - IDs of transactions currently being uploaded
 
 **Actions:**
-- `focusTransaction(TransactionInfo)` - Set a transaction as focused for editing
-- `defocusTransaction()` - Clear the focused transaction
 - `updateTransaction(TransactionInfo)` - Update a transaction in the database
 - `deleteTransaction(TransactionInfo)` - Delete a transaction from the database
 - `uploadThenDeleteTransaction(TransactionInfo)` - Upload transaction to backend and delete on success
@@ -123,7 +134,7 @@ App Launch
 
 ### 3. Main Screen
 
-**Responsibility:** Host bottom navigation and display selected tab content.
+**Responsibility:** Host bottom navigation and navigate to selected tab.
 
 **UI Diagram:**
 ```
@@ -179,7 +190,7 @@ App Launch
 
 ### 5. Recent Tab
 
-**Responsibility:** Display and manage recent transactions.
+**Responsibility:** Display and manage recent transactions with nested navigation for editing.
 
 **Features:**
 - Display transactions in a list ordered by timestamp descending, or a "No transactions yet" message
@@ -189,15 +200,14 @@ App Launch
 
 **Architecture:**
 ```
-RecentScreen
-|-- Box
-    |-- LazyColumn
-    |   |-- TransactionItem (Card with swipe gestures)
-    |       |-- SwipeToDismissBox
-    |           |-- backgroundContent (colored background with icon)
-    |           |-- content (transaction details)
-    |-- AnimatedVisibility
-        |-- EditTransactionScreen
+RecentScreen (NavHost)
+|-- composable(recent/list)
+|   |-- TransactionItem (Card with swipe gestures)
+|       |-- SwipeToDismissBox
+|           |-- backgroundContent (colored background with icon)
+|           |-- content (transaction details)
+|-- composable(recent/{transactionId}) (uri: "app://com.example.accounting/recent/{transactionId}")
+    |-- EditTransactionScreen
 ```
 
 **Transaction Item Layout:**
@@ -227,7 +237,7 @@ RecentScreen
 ```
 
 **Interaction:**
-- Click: Opens EditTransactionScreen stacking on top for editing the transaction
+- Click: Navigates to EditTransactionScreen for editing the transaction
 - Swipe left (EndToStart): Red background with delete icon, triggers deletion
 - Swipe right (StartToEnd): Green background with check icon, triggers upload
     - On success: Transaction is deleted from local database
@@ -270,9 +280,9 @@ RecentScreen
 
 **Behavior:**
 - Loads existing transaction values as defaults
-- Navigation back: saves valid changes and returns to Recent Tab
-- Upload button: saves changes, triggers upload and returns to Recent Tab
-- Delete button: deletes transaction and returns to Recent Tab
+- Navigation back: saves valid changes and returns to transaction list
+- Upload button: saves changes, triggers upload and returns to transaction list
+- Delete button: deletes transaction and returns to transaction list
 
 ---
 

@@ -9,7 +9,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import com.example.accounting.navigation.Routes
+import com.example.accounting.ui.navigation.Routes
 import com.example.accounting.ui.screen.MainScreen
 import com.example.accounting.ui.screen.PermissionScreen
 import com.example.accounting.ui.theme.AccountingTheme

@@ -49,7 +49,7 @@ import androidx.navigation.navArgument
 import androidx.navigation.navDeepLink
 import com.example.accounting.model.PaymentViewType
 import com.example.accounting.model.TransactionInfo
-import com.example.accounting.navigation.Routes
+import com.example.accounting.ui.navigation.Routes
 import com.example.accounting.ui.viewmodel.TransactionViewModel
 import java.text.SimpleDateFormat
 import java.util.Date

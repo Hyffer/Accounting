@@ -1,4 +1,4 @@
-package com.example.accounting.navigation
+package com.example.accounting.ui.navigation
 
 object Routes {
     // App-level routes

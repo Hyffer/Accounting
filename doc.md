@@ -93,6 +93,8 @@ app/src/main/java/com/example/accounting/
 |-- datastore/
 |   |-- ConfigDataStore.kt
 |-- ui/
+    |-- navigation/
+    |   |-- Routes.kt
     |-- screen/
     |   |-- DevScreen.kt
     |   |-- MainScreen.kt
