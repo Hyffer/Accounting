@@ -9,6 +9,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.example.accounting.navigation.Routes
 import com.example.accounting.ui.screen.MainScreen
 import com.example.accounting.ui.screen.PermissionScreen
 import com.example.accounting.ui.theme.AccountingTheme
@@ -34,29 +35,29 @@ fun AppNavigation() {
     val hasOverlayPermission = PermissionHelper.checkOverlayPermission(context)
     val hasAccessibilityPermission = PermissionHelper.checkAccessibilityPermission(context)
     val startDestination = if (hasOverlayPermission && hasAccessibilityPermission) {
-        "main"
+        Routes.MAIN
     } else {
-        "permissionRequest"
+        Routes.PERMISSION_REQUEST
     }
 
     NavHost(
         navController = navController,
         startDestination = startDestination
     ) {
-        composable("permissionRequest") {
+        composable(Routes.PERMISSION_REQUEST) {
             PermissionScreen(
                 onPermissionsGranted = {
-                    navController.navigate("main") {
-                        popUpTo("permissionRequest") { inclusive = true }
+                    navController.navigate(Routes.MAIN) {
+                        popUpTo(Routes.PERMISSION_REQUEST) { inclusive = true }
                     }
                 }
             )
         }
-        composable("main") {
+        composable(Routes.MAIN) {
             MainScreen(
                 onPermissionsRevoked = {
-                    navController.navigate("permissionRequest") {
-                        popUpTo("main") { inclusive = true }
+                    navController.navigate(Routes.PERMISSION_REQUEST) {
+                        popUpTo(Routes.MAIN) { inclusive = true }
                     }
                 }
             )

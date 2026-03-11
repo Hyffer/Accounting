@@ -27,24 +27,12 @@ class TransactionViewModel(application: Application) : AndroidViewModel(applicat
     private val _uploadingIds = MutableStateFlow<Set<Long>>(emptySet())
     val uploadingIds: StateFlow<Set<Long>> = _uploadingIds.asStateFlow()
 
-    // Edit screen state
-    private val _focusedTransaction = MutableStateFlow<TransactionInfo?>(null)
-    val focusedTransaction: StateFlow<TransactionInfo?> = _focusedTransaction.asStateFlow()
-
     init {
         val database = AppDatabase.getDatabase(application)
         repository = TransactionRepository(database)
         transactionApi = TransactionApi(application)
         transactions = repository.getAllTransactions()
             .stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
-    }
-
-    fun focusTransaction(transaction: TransactionInfo) {
-        _focusedTransaction.value = transaction
-    }
-
-    fun defocusTransaction() {
-        _focusedTransaction.value = null
     }
 
     fun updateTransaction(transaction: TransactionInfo) {

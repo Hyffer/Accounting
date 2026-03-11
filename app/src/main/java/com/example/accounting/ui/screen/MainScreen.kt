@@ -15,7 +15,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -23,6 +22,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
+import androidx.navigation.NavController
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.currentBackStackEntryAsState
+import androidx.navigation.compose.rememberNavController
+import com.example.accounting.navigation.Routes
 import com.example.accounting.util.PermissionHelper
 
 @Composable
@@ -34,7 +39,8 @@ fun MainScreen(
     context as? ComponentActivity
     val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
 
-    var selectedTabIndex by remember { mutableIntStateOf(0) }
+    val navController = rememberNavController()
+
     var hasOverlayPermission by remember {
         mutableStateOf(PermissionHelper.checkOverlayPermission(context))
     }
@@ -64,49 +70,80 @@ fun MainScreen(
     Scaffold(
         modifier = modifier.fillMaxSize(),
         bottomBar = {
-            NavigationBar {
-                NavigationBarItem(
-                    selected = selectedTabIndex == 0,
-                    onClick = { selectedTabIndex = 0 },
-                    icon = {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.List,
-                            contentDescription = "Recent"
-                        )
-                    },
-                    label = { Text("Recent") }
-                )
-                NavigationBarItem(
-                    selected = selectedTabIndex == 1,
-                    onClick = { selectedTabIndex = 1 },
-                    icon = {
-                        Icon(imageVector = Icons.Default.Settings, contentDescription = "Config")
-                    },
-                    label = { Text("Config") }
-                )
-                NavigationBarItem(
-                    selected = selectedTabIndex == 2,
-                    onClick = { selectedTabIndex = 2 },
-                    icon = {
-                        Icon(imageVector = Icons.Default.Build, contentDescription = "Dev")
-                    },
-                    label = { Text("Dev") }
-                )
-            }
+            MainBottomNavigation(navController = navController)
         }
     ) { innerPadding ->
-        when (selectedTabIndex) {
-            0 -> RecentScreen(
-                modifier = Modifier.padding(innerPadding)
-            )
-
-            1 -> ConfigScreen(
-                modifier = Modifier.padding(innerPadding)
-            )
-
-            2 -> DevScreen(
-                modifier = Modifier.padding(innerPadding)
-            )
+        NavHost(
+            navController = navController,
+            startDestination = Routes.Main.RECENT,
+            modifier = Modifier.padding(innerPadding)
+        ) {
+            composable(Routes.Main.RECENT) {
+                RecentScreen()
+            }
+            composable(Routes.Main.CONFIG) {
+                ConfigScreen()
+            }
+            composable(Routes.Main.DEV) {
+                DevScreen()
+            }
         }
+    }
+}
+
+@Composable
+private fun MainBottomNavigation(navController: NavController) {
+    val navBackStackEntry by navController.currentBackStackEntryAsState()
+    val currentRoute = navBackStackEntry?.destination?.route
+
+    NavigationBar {
+        NavigationBarItem(
+            selected = currentRoute == Routes.Main.RECENT,
+            onClick = {
+                if (currentRoute != Routes.Main.RECENT) {
+                    navController.navigate(Routes.Main.RECENT) {
+                        popUpTo(Routes.Main.RECENT) { inclusive = false }
+                        launchSingleTop = true
+                    }
+                }
+            },
+            icon = {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.List,
+                    contentDescription = "Recent"
+                )
+            },
+            label = { Text("Recent") }
+        )
+        NavigationBarItem(
+            selected = currentRoute == Routes.Main.CONFIG,
+            onClick = {
+                if (currentRoute != Routes.Main.CONFIG) {
+                    navController.navigate(Routes.Main.CONFIG) {
+                        popUpTo(Routes.Main.RECENT) { inclusive = false }
+                        launchSingleTop = true
+                    }
+                }
+            },
+            icon = {
+                Icon(imageVector = Icons.Default.Settings, contentDescription = "Config")
+            },
+            label = { Text("Config") }
+        )
+        NavigationBarItem(
+            selected = currentRoute == Routes.Main.DEV,
+            onClick = {
+                if (currentRoute != Routes.Main.DEV) {
+                    navController.navigate(Routes.Main.DEV) {
+                        popUpTo(Routes.Main.RECENT) { inclusive = false }
+                        launchSingleTop = true
+                    }
+                }
+            },
+            icon = {
+                Icon(imageVector = Icons.Default.Build, contentDescription = "Dev")
+            },
+            label = { Text("Dev") }
+        )
     }
 }

@@ -1,10 +1,9 @@
 package com.example.accounting.ui.screen
 
-import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.AnimatedContentTransitionScope
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -42,8 +41,15 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavType
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
+import androidx.navigation.navDeepLink
 import com.example.accounting.model.PaymentViewType
 import com.example.accounting.model.TransactionInfo
+import com.example.accounting.navigation.Routes
 import com.example.accounting.ui.viewmodel.TransactionViewModel
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -55,74 +61,115 @@ fun RecentScreen(
     viewModel: TransactionViewModel = viewModel()
 ) {
     val transactions by viewModel.transactions.collectAsState()
-    val focusedTransaction by viewModel.focusedTransaction.collectAsState()
     val uploadingIds by viewModel.uploadingIds.collectAsState()
+    val navController = rememberNavController()
 
-    Box(modifier = modifier.fillMaxSize()) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(16.dp)
-        ) {
-            if (transactions.isEmpty()) {
+    NavHost(
+        navController = navController,
+        startDestination = Routes.Main.Recent.LIST,
+        modifier = modifier
+    ) {
+        composable(Routes.Main.Recent.LIST) {
+            Column(
+                modifier = modifier
+                    .fillMaxSize()
+                    .padding(16.dp)
+            ) {
+                if (transactions.isEmpty()) {
+                    Column(
+                        modifier = Modifier.fillMaxSize(),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center
+                    ) {
+                        Text(
+                            text = "No transactions yet",
+                            style = MaterialTheme.typography.bodyLarge,
+                            textAlign = TextAlign.Center,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                } else {
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        items(
+                            items = transactions,
+                            key = { it.id }
+                        ) { transaction ->
+                            TransactionItem(
+                                transaction = transaction,
+                                isUploading = transaction.id in uploadingIds,
+                                onDelete = { viewModel.deleteTransaction(transaction) },
+                                onUpload = { viewModel.uploadThenDeleteTransaction(transaction) },
+                                onEdit = {
+                                    navController.navigate(Routes.Main.Recent.editRoute(transaction.id))
+                                },
+                                modifier = Modifier.animateItem()
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+        composable(
+            route = Routes.Main.Recent.EDIT,
+            deepLinks = listOf(
+                navDeepLink { uriPattern = "app://com.example.accounting/recent/{transactionId}" }
+            ),
+            arguments = listOf(
+                navArgument("transactionId") { type = NavType.LongType }
+            ),
+            enterTransition = {
+                slideIntoContainer(
+                    towards = AnimatedContentTransitionScope.SlideDirection.Up,
+                    animationSpec = tween(300)
+                ) + fadeIn(animationSpec = tween(300))
+            },
+            exitTransition = {
+                slideOutOfContainer(
+                    towards = AnimatedContentTransitionScope.SlideDirection.Down,
+                    animationSpec = tween(300)
+                ) + fadeOut(animationSpec = tween(300))
+            }
+        ) { backStackEntry ->
+            val transactionId = backStackEntry.arguments?.getLong("transactionId")
+            val transactions by viewModel.transactions.collectAsState()
+            val transaction = transactions.find { it.id == transactionId }
+
+            transaction?.let { transaction ->
+                EditTransactionScreen(
+                    transaction = transaction,
+                    onDismiss = { updatedTransactionOrNull ->
+                        updatedTransactionOrNull?.let { viewModel.updateTransaction(it) }
+                        navController.popBackStack()
+                    },
+                    onUpload = { updatedTransaction ->
+                        viewModel.updateTransaction(updatedTransaction)
+                        viewModel.uploadThenDeleteTransaction(updatedTransaction)
+                        navController.popBackStack()
+                    },
+                    onDelete = { transactionToDelete ->
+                        viewModel.deleteTransaction(transactionToDelete)
+                        navController.popBackStack()
+                    },
+                    modifier = Modifier.fillMaxSize()
+                )
+            } ?: run {
+                // Transaction not found
                 Column(
                     modifier = Modifier.fillMaxSize(),
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.Center
                 ) {
                     Text(
-                        text = "No transactions yet",
+                        text = "Transaction id $transactionId not found",
                         style = MaterialTheme.typography.bodyLarge,
                         textAlign = TextAlign.Center,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
-            } else {
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    items(
-                        items = transactions,
-                        key = { it.id }
-                    ) { transaction ->
-                        TransactionItem(
-                            transaction = transaction,
-                            isUploading = transaction.id in uploadingIds,
-                            onDelete = { viewModel.deleteTransaction(transaction) },
-                            onUpload = { viewModel.uploadThenDeleteTransaction(transaction) },
-                            onEdit = { viewModel.focusTransaction(transaction) },
-                            modifier = Modifier.animateItem()
-                        )
-                    }
-                }
-            }
-        }
-
-        // Edit Transaction Screen Overlay
-        AnimatedVisibility(
-            visible = focusedTransaction != null,
-            enter = slideInVertically(initialOffsetY = { it }) + fadeIn(),
-            exit = slideOutVertically(targetOffsetY = { it }) + fadeOut()
-        ) {
-            focusedTransaction?.let { transaction ->
-                EditTransactionScreen(
-                    transaction = transaction,
-                    onDismiss = { updatedTransactionOrNull ->
-                        updatedTransactionOrNull?.let { viewModel.updateTransaction(it) }
-                        viewModel.defocusTransaction()
-                    },
-                    onUpload = { updatedTransaction ->
-                        viewModel.updateTransaction(updatedTransaction)
-                        viewModel.uploadThenDeleteTransaction(updatedTransaction)
-                        viewModel.defocusTransaction()
-                    },
-                    onDelete = { transactionToDelete ->
-                        viewModel.deleteTransaction(transactionToDelete)
-                        viewModel.defocusTransaction()
-                    },
-                    modifier = Modifier.fillMaxSize()
-                )
             }
         }
     }
