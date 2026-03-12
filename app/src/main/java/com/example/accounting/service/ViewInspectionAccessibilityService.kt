@@ -126,8 +126,9 @@ open class ViewInspectionAccessibilityService : AccessibilityService() {
         }
 
         // New transaction - save and notify
-        transactionRepository.insertTransaction(transaction)
-        TransactionNotificationManager.showNotification(this, transaction)
+        val id = transactionRepository.insertTransaction(transaction)
+        val inserted = transaction.copy(id = id)
+        TransactionNotificationManager.showNotification(this, inserted)
     }
 
     override fun onInterrupt() {

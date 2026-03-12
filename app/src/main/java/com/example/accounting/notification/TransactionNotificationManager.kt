@@ -2,8 +2,11 @@ package com.example.accounting.notification
 
 import android.app.NotificationChannel
 import android.app.NotificationManager
+import android.app.PendingIntent
 import android.content.Context
+import android.content.Intent
 import androidx.core.app.NotificationCompat
+import androidx.core.net.toUri
 import com.example.accounting.model.PaymentViewType
 import com.example.accounting.model.TransactionInfo
 
@@ -12,6 +15,11 @@ object TransactionNotificationManager {
     private const val CHANNEL_NAME = "Transaction Detection"
     private const val NOTIFICATION_ID_BASE = 1000
 
+    /**
+     * Shows notification about detected transaction
+     * @param context
+     * @param transaction with database generated id field
+     */
     fun showNotification(context: Context, transaction: TransactionInfo) {
         val notificationManager =
             context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
@@ -25,6 +33,7 @@ object TransactionNotificationManager {
         }
 
         val content = buildNotificationContent(transaction)
+        val pendingIntent = createEditPendingIntent(context, transaction.id)
 
         val notification = NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(android.R.drawable.ic_dialog_info)
@@ -33,9 +42,10 @@ object TransactionNotificationManager {
             .setStyle(NotificationCompat.BigTextStyle().bigText(content))
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setAutoCancel(true)
+            .setContentIntent(pendingIntent)
             .build()
 
-        val notificationId = NOTIFICATION_ID_BASE + transaction.timestamp.toInt()
+        val notificationId = NOTIFICATION_ID_BASE + transaction.id.toInt()
         notificationManager.notify(notificationId, notification)
     }
 
@@ -51,6 +61,21 @@ object TransactionNotificationManager {
         }
 
         return lines.joinToString("\n")
+    }
+
+    /**
+     * Creates a PendingIntent that opens the Edit Screen for the given transaction.
+     * Uses deep link: app://com.example.accounting/recent/{transactionId}
+     */
+    private fun createEditPendingIntent(context: Context, transactionId: Long): PendingIntent {
+        val deepLinkUri = "app://com.example.accounting/recent/$transactionId".toUri()
+        val intent = Intent(Intent.ACTION_VIEW, deepLinkUri).apply {
+            setPackage(context.packageName)
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+        }
+
+        val flags = PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        return PendingIntent.getActivity(context, transactionId.toInt(), intent, flags)
     }
 
     private fun createNotificationChannel(notificationManager: NotificationManager) {
