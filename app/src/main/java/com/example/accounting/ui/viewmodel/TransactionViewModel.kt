@@ -9,6 +9,7 @@ import com.example.accounting.database.AppDatabase
 import com.example.accounting.model.TransactionInfo
 import com.example.accounting.repository.TransactionRepository
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -68,9 +69,16 @@ class TransactionViewModel(application: Application) : AndroidViewModel(applicat
         if (alreadyOnTheFly) return
 
         viewModelScope.launch {
+            val deliberateDelay = launch {
+                // Currently in RecentScreen, state handling between UI and async task is chaotic.
+                // If uploading fails immediately, the transaction dismiss box might end up in a wrong state.
+                // Add a delay here deliberately to prevent it finishing too fast that breaks UI.
+                delay(500)
+            }
             val result = withContext(Dispatchers.IO) {
                 transactionApi.postTransaction(transaction)
             }
+            deliberateDelay.join()
 
             _uploadingIds.update { it - transaction.id }
 
