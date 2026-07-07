@@ -19,6 +19,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.Card
@@ -64,6 +65,42 @@ fun RecentScreen(
     val uploadingIds by viewModel.uploadingIds.collectAsState()
     val navController = rememberNavController()
 
+    // "+" button
+    @Composable
+    fun AddTransactionItem() {
+        val roundedShape = RoundedCornerShape(12.dp)
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(roundedShape) // rounded pressed effect
+                .clickable {
+                    val newTransaction = TransactionInfo(
+                        amount = java.math.BigDecimal.ZERO,
+                        merchant = null,
+                        paymentMethod = null,
+                        timestamp = System.currentTimeMillis(),
+                        viewType = PaymentViewType.Success
+                    )
+                    viewModel.insertTransaction(newTransaction) { newId ->
+                        navController.navigate(Routes.Main.Recent.editRoute(newId))
+                    }
+                }
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Add,
+                    contentDescription = "Add transaction",
+                    tint = MaterialTheme.colorScheme.primary
+                )
+            }
+        }
+    }
+
     NavHost(
         navController = navController,
         startDestination = Routes.Main.Recent.LIST,
@@ -76,6 +113,7 @@ fun RecentScreen(
                     .padding(16.dp)
             ) {
                 if (transactions.isEmpty()) {
+                    AddTransactionItem()
                     Column(
                         modifier = Modifier.fillMaxSize(),
                         horizontalAlignment = Alignment.CenterHorizontally,
@@ -93,6 +131,9 @@ fun RecentScreen(
                         modifier = Modifier.fillMaxSize(),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
+                        item {
+                            AddTransactionItem()
+                        }
                         items(
                             items = transactions,
                             key = { it.id }

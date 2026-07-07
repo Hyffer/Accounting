@@ -77,6 +77,7 @@ App Launch
 - `uploadingIds: StateFlow<Set<Long>>` - IDs of transactions currently being uploaded
 
 **Actions:**
+- `insertTransaction(TransactionInfo, (Long) -> Unit)` - Insert a new transaction and invoke callback with generated ID
 - `updateTransaction(TransactionInfo)` - Update a transaction in the database
 - `deleteTransaction(TransactionInfo)` - Delete a transaction from the database
 - `uploadThenDeleteTransaction(TransactionInfo)` - Upload transaction to backend and delete on success
@@ -194,6 +195,7 @@ App Launch
 
 **Features:**
 - Display transactions in a list ordered by timestamp descending, or a "No transactions yet" message
+- A "+" button at the top for manually jotting down new transaction
 - Click transaction to edit
 - Swipe left to delete transaction
 - Swipe right to upload transaction to backend server
@@ -202,6 +204,7 @@ App Launch
 ```
 RecentScreen (NavHost)
 |-- composable(recent/list)
+|   |-- AddTransactionItem ("+" button)
 |   |-- TransactionItem (Card with swipe gestures)
 |       |-- SwipeToDismissBox
 |           |-- backgroundContent (colored background with icon)
@@ -222,6 +225,10 @@ RecentScreen (NavHost)
 ```
 +------------------------------------------+
 |         Recent Transactions              |
+|                                          |
+|  +------------------------------------+  |
+|  |               +                    |  |
+|  +------------------------------------+  |
 |                                          |
 |  +------------------------------------+  |
 |  | ¥25.00             Success  14:30  |  |

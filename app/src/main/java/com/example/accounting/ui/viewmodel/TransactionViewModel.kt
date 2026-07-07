@@ -41,6 +41,13 @@ class TransactionViewModel(application: Application) : AndroidViewModel(applicat
         }
     }
 
+    fun insertTransaction(transaction: TransactionInfo, onInserted: (Long) -> Unit) {
+        viewModelScope.launch {
+            val id = repository.insertTransaction(transaction)
+            onInserted(id)
+        }
+    }
+
     fun deleteTransaction(transaction: TransactionInfo) {
         viewModelScope.launch {
             repository.deleteTransaction(transaction)
