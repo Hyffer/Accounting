@@ -9,7 +9,6 @@ import com.example.accounting.database.AppDatabase
 import com.example.accounting.model.TransactionInfo
 import com.example.accounting.repository.TransactionRepository
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -19,14 +18,29 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
+/**
+ * Transaction processing state.
+ * State transition:
+ * - Upload: Idle -> Uploading
+ * - Upload success: Uploading -> Deleting
+ * - Upload fail: Uploading -> Failed
+ * - Clear: Failed -> Idle
+ * - Delete: Idle -> Deleting
+ */
+enum class TransactionState {
+    Idle,
+    Uploading,
+    Failed,
+    Deleting
+}
+
 class TransactionViewModel(application: Application) : AndroidViewModel(application) {
     private val repository: TransactionRepository
     private val transactionApi: TransactionApi
     val transactions: StateFlow<List<TransactionInfo>>
 
-    // Uploading on the fly
-    private val _uploadingIds = MutableStateFlow<Set<Long>>(emptySet())
-    val uploadingIds: StateFlow<Set<Long>> = _uploadingIds.asStateFlow()
+    private val _transactionStates = MutableStateFlow<Map<Long, TransactionState>>(emptyMap())
+    val transactionStates: StateFlow<Map<Long, TransactionState>> = _transactionStates.asStateFlow()
 
     init {
         val database = AppDatabase.getDatabase(application)
@@ -50,46 +64,58 @@ class TransactionViewModel(application: Application) : AndroidViewModel(applicat
     }
 
     fun deleteTransaction(transaction: TransactionInfo) {
+        var allowDirectDelete = false
+        _transactionStates.update { current ->
+            val state = current[transaction.id] ?: TransactionState.Idle
+            if (state == TransactionState.Idle) {
+                allowDirectDelete = true
+                current + (transaction.id to TransactionState.Deleting)
+            } else {
+                current
+            }
+        }
+        if (!allowDirectDelete) return
+
         viewModelScope.launch {
             repository.deleteTransaction(transaction)
+            // TransactionState.Deleting not removed,
+            // to get rid of figuring out which of `transactions` and `transactionStates` updates first.
         }
     }
 
     fun uploadThenDeleteTransaction(transaction: TransactionInfo) {
-        // Atomically check and add
-        var alreadyOnTheFly = false
-        _uploadingIds.update { current ->
-            if (transaction.id in current) {
-                alreadyOnTheFly = true
-                current
+        // Atomically check and update
+        var allowUpload = false
+        _transactionStates.update { current ->
+            val state = current[transaction.id] ?: TransactionState.Idle
+            if (state == TransactionState.Idle) {
+                allowUpload = true
+                current + (transaction.id to TransactionState.Uploading)
             } else {
-                current + transaction.id
+                current
             }
         }
-        if (alreadyOnTheFly) return
+        if (!allowUpload) return
 
         viewModelScope.launch {
-            val deliberateDelay = launch {
-                // Currently in RecentScreen, state handling between UI and async task is chaotic.
-                // If uploading fails immediately, the transaction dismiss box might end up in a wrong state.
-                // Add a delay here deliberately to prevent it finishing too fast that breaks UI.
-                delay(500)
-            }
             val result = withContext(Dispatchers.IO) {
                 transactionApi.postTransaction(transaction)
             }
-            deliberateDelay.join()
-
-            _uploadingIds.update { it - transaction.id }
 
             result.fold(
                 onSuccess = {
+                    _transactionStates.update { it + (transaction.id to TransactionState.Deleting) }
                     repository.deleteTransaction(transaction)   // deletion implement only checks primary key
                 },
                 onFailure = { error ->
+                    _transactionStates.update { it + (transaction.id to TransactionState.Failed) }
                     Toast.makeText(getApplication(), error.toString(), Toast.LENGTH_SHORT).show()
                 }
             )
         }
+    }
+
+    fun clearTransactionState(transactionId: Long) {
+        _transactionStates.update { it - transactionId }
     }
 }

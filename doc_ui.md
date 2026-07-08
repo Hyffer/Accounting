@@ -74,16 +74,17 @@ App Launch
 
 **State:**
 - `transactions: StateFlow<List<TransactionInfo>>` - All transactions ordered by timestamp descending
-- `uploadingIds: StateFlow<Set<Long>>` - IDs of transactions currently being uploaded
+- `transactionStates: StateFlow<Map<Long, TransactionState>>` - Keep track of transaction processing states
 
 **Actions:**
 - `insertTransaction(TransactionInfo, (Long) -> Unit)` - Insert a new transaction and invoke callback with generated ID
 - `updateTransaction(TransactionInfo)` - Update a transaction in the database
 - `deleteTransaction(TransactionInfo)` - Delete a transaction from the database
 - `uploadThenDeleteTransaction(TransactionInfo)` - Upload transaction to backend and delete on success
+- `clearTransactionState(Long)` - Clear a transaction state
 
 **Upload State Management:**
-- Upload state is tracked in `uploadingIds` using a `Set<Long>`
+- Processing state is tracked in `transactionStates` using a `Map<Long, TransactionState>`
 - Thread-safe atomic updates using `MutableStateFlow.update { }`
 - Prevents duplicate uploads for the same transaction
 - Upload progress persists across navigation (ViewModel lifecycle)

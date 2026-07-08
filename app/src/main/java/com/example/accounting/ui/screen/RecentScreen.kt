@@ -51,6 +51,7 @@ import androidx.navigation.navDeepLink
 import com.example.accounting.model.PaymentViewType
 import com.example.accounting.model.TransactionInfo
 import com.example.accounting.ui.navigation.Routes
+import com.example.accounting.ui.viewmodel.TransactionState
 import com.example.accounting.ui.viewmodel.TransactionViewModel
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -62,7 +63,7 @@ fun RecentScreen(
     viewModel: TransactionViewModel = viewModel()
 ) {
     val transactions by viewModel.transactions.collectAsState()
-    val uploadingIds by viewModel.uploadingIds.collectAsState()
+    val transactionStates by viewModel.transactionStates.collectAsState()
     val navController = rememberNavController()
 
     // "+" button
@@ -140,7 +141,8 @@ fun RecentScreen(
                         ) { transaction ->
                             TransactionItem(
                                 transaction = transaction,
-                                isUploading = transaction.id in uploadingIds,
+                                state = transactionStates[transaction.id] ?: TransactionState.Idle,
+                                onReset = { viewModel.clearTransactionState(transaction.id) },
                                 onDelete = { viewModel.deleteTransaction(transaction) },
                                 onUpload = { viewModel.uploadThenDeleteTransaction(transaction) },
                                 onEdit = {
@@ -219,15 +221,17 @@ fun RecentScreen(
 @Composable
 private fun TransactionItem(
     transaction: TransactionInfo,
-    isUploading: Boolean,
+    state: TransactionState,
+    onReset: () -> Unit,
     onDelete: () -> Unit,
     onUpload: () -> Unit,
     onEdit: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val busy = state != TransactionState.Idle
     val dismissState = rememberSwipeToDismissBoxState(
         initialValue =
-            if (isUploading) SwipeToDismissBoxValue.StartToEnd
+            if (busy) SwipeToDismissBoxValue.StartToEnd
             else SwipeToDismissBoxValue.Settled,
         confirmValueChange = { dismissValue ->
             when (dismissValue) {
@@ -240,17 +244,19 @@ private fun TransactionItem(
         positionalThreshold = { totalDistance -> totalDistance * 0.4f }
     )
 
-    LaunchedEffect(isUploading) {
-        if (isUploading && dismissState.currentValue != SwipeToDismissBoxValue.StartToEnd)
+    LaunchedEffect(state) {
+        if (state == TransactionState.Uploading && dismissState.currentValue != SwipeToDismissBoxValue.StartToEnd)
             dismissState.dismiss(SwipeToDismissBoxValue.StartToEnd)
-        if (!isUploading && dismissState.currentValue == SwipeToDismissBoxValue.StartToEnd)
+        if (state == TransactionState.Failed) {
             dismissState.reset()
+            onReset()
+        }
     }
 
     SwipeToDismissBox(
         state = dismissState,
         modifier = modifier,
-        gesturesEnabled = !isUploading,
+        gesturesEnabled = !busy,
         backgroundContent = {
             val roundedShape = RoundedCornerShape(12.dp)    // match Card's rounded corners
             val concentration = when (dismissState.targetValue) {
@@ -299,7 +305,7 @@ private fun TransactionItem(
                 .clickable(
                     interactionSource = remember { MutableInteractionSource() },
                     indication = null,
-                    enabled = !isUploading,
+                    enabled = !busy,
                     onClick = onEdit
                 )
         ) {
