@@ -41,43 +41,21 @@ object AlipayHandler : PaymentAppHandler {
         textNodes: List<ViewNodeInfo>,
         viewType: PaymentViewType
     ): BigDecimal? {
-        when (viewType) {
-            is PaymentViewType.Request -> {
-                for (node in textNodes) {
-                    val contentDesc = node.contentDescription
-                    if (contentDesc != null && contentDesc.contains("付款金额")) {
-                        val regex = Regex("""付款金额([\d.]+)元""")
-                        val match = regex.find(contentDesc)
-                        if (match != null) {
-                            val amountValue = match.groupValues[1]
-                            return amountValue.toBigDecimalOrNull()
-                        }
-                    }
+        val keyword: String = when (viewType) {
+            is PaymentViewType.Request -> "付款金额"
+            is PaymentViewType.Success -> "支付成功"
+            else -> return null
+        }
+        for (node in textNodes) {
+            val contentDesc = node.contentDescription
+            if (contentDesc != null && contentDesc.contains(keyword)) {
+                val regex = Regex("""$keyword\s*[¥￥]?\s*([\d.]+)\s*元?""")
+                val match = regex.find(contentDesc)
+                if (match != null) {
+                    val amountValue = match.groupValues[1]
+                    return amountValue.toBigDecimalOrNull()
                 }
             }
-
-            is PaymentViewType.Success -> {
-                val nodesWithAmount = textNodes.filter { node ->
-                    val text = node.text ?: ""
-                    PatternMatcher.containsAmount(text)
-                }
-
-                if (nodesWithAmount.isNotEmpty()) {
-                    val largestNode = nodesWithAmount.maxByOrNull { node ->
-                        val bounds = node.boundsInScreen
-                        if (bounds != null) {
-                            val width = bounds.right - bounds.left
-                            val height = bounds.bottom - bounds.top
-                            width * height
-                        } else {
-                            0
-                        }
-                    }
-                    return largestNode?.text?.let { PatternMatcher.extractAmount(it) }
-                }
-            }
-
-            else -> {}
         }
         return null
     }
