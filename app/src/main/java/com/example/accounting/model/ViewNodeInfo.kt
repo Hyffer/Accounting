@@ -1,6 +1,12 @@
 package com.example.accounting.model
 
-import android.graphics.Rect
+// android.graphics.Rect does not work in local JUnit tests
+data class Rect(
+    var left: Int = 0,
+    var top: Int = 0,
+    var right: Int = 0,
+    var bottom: Int = 0
+)
 
 data class ViewNodeInfo(
     // properties from AccessibilityNodeInfo

@@ -1,6 +1,6 @@
 package com.example.accounting.util
 
-import android.graphics.Rect
+import com.example.accounting.model.Rect
 import com.example.accounting.model.PaymentViewType
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder

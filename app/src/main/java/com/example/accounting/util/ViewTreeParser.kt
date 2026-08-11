@@ -1,15 +1,16 @@
 package com.example.accounting.util
 
-import android.graphics.Rect
 import android.view.accessibility.AccessibilityNodeInfo
+import com.example.accounting.model.Rect
 import com.example.accounting.model.ViewNodeInfo
 
 object ViewTreeParser {
     fun parseNodeTree(node: AccessibilityNodeInfo?, depth: Int = 0): ViewNodeInfo? {
         if (node == null) return null
 
-        val bounds = Rect()
+        val bounds = android.graphics.Rect()
         node.getBoundsInScreen(bounds)
+        val rect = Rect(bounds.left, bounds.top, bounds.right, bounds.bottom)
 
         val children = mutableListOf<ViewNodeInfo>()
         for (i in 0 until node.childCount) {
@@ -38,7 +39,7 @@ object ViewTreeParser {
             text = node.text?.toString(),
             contentDescription = node.contentDescription?.toString(),
             viewIdResourceName = node.viewIdResourceName,
-            boundsInScreen = bounds,
+            boundsInScreen = rect,
             isClickable = node.isClickable,
             isEnabled = node.isEnabled,
             isFocusable = node.isFocusable,
