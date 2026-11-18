@@ -43,6 +43,7 @@ object WeChatPayHandler : PaymentAppHandler {
     private fun extractAmount(textNodes: List<ViewNodeInfo>): BigDecimal? {
         val nodesWithAmount = textNodes.filter { node ->
             PatternMatcher.containsAmount(node.text ?: "")
+                    || PatternMatcher.containsAmount(node.contentDescription ?: "")
         }
 
         if (nodesWithAmount.isEmpty()) return null
@@ -59,5 +60,6 @@ object WeChatPayHandler : PaymentAppHandler {
         }
 
         return largestNode?.text?.let { PatternMatcher.extractAmount(it) }
+            ?: largestNode?.contentDescription?.let { PatternMatcher.extractAmount(it) }
     }
 }

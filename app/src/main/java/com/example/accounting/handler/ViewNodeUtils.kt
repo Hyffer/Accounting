@@ -15,6 +15,7 @@ object ViewNodeUtils {
 
         fun traverse(currentNode: ViewNodeInfo) {
             currentNode.text?.let { result.add(it) }
+            currentNode.contentDescription?.let { result.add(it) }
             currentNode.children.forEach { traverse(it) }
         }
 
