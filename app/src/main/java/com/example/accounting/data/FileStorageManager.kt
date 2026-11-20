@@ -1,6 +1,7 @@
 package com.example.accounting.data
 
 import android.content.Context
+import android.graphics.Bitmap
 import com.example.accounting.model.InspectionResult
 import com.example.accounting.util.GsonProvider
 import java.io.File
@@ -14,11 +15,27 @@ class FileStorageManager(private val context: Context) {
         }
     }
 
-    fun saveInspection(result: InspectionResult): File {
+    fun saveInspection(result: InspectionResult, screenshot: Bitmap? = null): File {
         val fileName = "inspection_${result.timestamp}.json"
         val file = File(inspectionsDir, fileName)
         file.writeText(gson.toJson(result))
+        if (screenshot != null) {
+            saveScreenshot(result.timestamp, screenshot)
+        }
         return file
+    }
+
+    private fun saveScreenshot(timestamp: Long, screenshot: Bitmap) {
+        val file = File(inspectionsDir, "inspection_$timestamp.png")
+        try {
+            file.outputStream().use { output ->
+                if (!screenshot.compress(Bitmap.CompressFormat.PNG, 100, output)) {
+                    file.delete()
+                }
+            }
+        } catch (_: Exception) {
+            file.delete()
+        }
     }
 
     fun getInspectionFiles(): List<File> {

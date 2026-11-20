@@ -214,12 +214,12 @@ The application uses Room database for persistent storage of transaction informa
 - **TransactionRepository**: Repository pattern implementation for data access
 
 #### `data/FileStorageManager.kt`
-Manages JSON file I/O for inspection results.
+Manages file I/O for inspection results.
 
-**Storage Location:** `/data/data/com.example.accounting/files/inspections/inspection_<timestamp>.json`
+**Storage Location:** `/data/data/com.example.accounting/files/inspections/inspection_<timestamp>.json` (plus `inspection_<timestamp>.png` when a screenshot was captured)
 
 **Functions:**
-- `saveInspection(result)`: Saves InspectionResult to timestamped JSON file
+- `saveInspection(result, screenshot)`: Saves InspectionResult to timestamped JSON file; optionally saves a PNG screenshot with the same timestamp
 - `getInspectionFiles()`: Returns list of all inspection files, newest first
 - `deleteInspection(file)`: Deletes a specific inspection file
 
@@ -240,7 +240,7 @@ Base accessibility service that handles view inspection and payment detection.
 **Key Components:**
 
 1. **BroadcastReceiver** - Listens for `INSPECT_ACTION` broadcast
-2. **performInspection()** - Captures and saves view tree
+2. **performInspection()** - Captures and saves view tree, and tries to get a screenshot
 3. **onAccessibilityEvent()** - Real-time payment detection and extraction
 4. **processTransaction()** - transaction deduplication and matching
 

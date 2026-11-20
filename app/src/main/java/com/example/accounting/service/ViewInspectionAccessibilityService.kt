@@ -5,9 +5,12 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.graphics.Bitmap
 import android.os.Build
+import android.view.Display
 import android.view.accessibility.AccessibilityEvent
 import android.widget.Toast
+import androidx.core.content.ContextCompat
 import com.example.accounting.R
 import com.example.accounting.data.FileStorageManager
 import com.example.accounting.database.AppDatabase
@@ -23,14 +26,18 @@ import com.example.accounting.util.ViewTreeParser
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withTimeoutOrNull
+import kotlin.coroutines.resume
 
 open class ViewInspectionAccessibilityService : AccessibilityService() {
 
     companion object {
         const val INSPECT_ACTION = "com.example.accounting.INSPECT_ACTION"
         private const val DUPLICATE_WINDOW_MS = 60_000L // 1 minute
+        private const val SCREENSHOT_TIMEOUT_MS = 3_000L
 
         @Volatile
         var instance: ViewInspectionAccessibilityService? = null
@@ -198,7 +205,8 @@ open class ViewInspectionAccessibilityService : AccessibilityService() {
                     totalViewCount = viewNodeInfo.size
                 )
 
-                fileStorageManager.saveInspection(result)
+                val screenshot = tryCaptureScreenshot()
+                fileStorageManager.saveInspection(result, screenshot)
 
                 launch(Dispatchers.Main) {
                     val message = if (result.totalViewCount <= 1) {
@@ -219,6 +227,54 @@ open class ViewInspectionAccessibilityService : AccessibilityService() {
                         "Error: ${e.message}",
                         Toast.LENGTH_SHORT
                     ).show()
+                }
+            }
+        }
+    }
+
+    /**
+     * Captures the current screen via the accessibility screenshot API (30+).
+     * Returns null when unsupported or on any failure.
+     */
+    private suspend fun tryCaptureScreenshot(): Bitmap? {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) return null
+
+        return withTimeoutOrNull(SCREENSHOT_TIMEOUT_MS) {
+            suspendCancellableCoroutine { continuation ->
+                val callback = object : TakeScreenshotCallback {
+                    override fun onSuccess(screenshotResult: ScreenshotResult) {
+                        val bitmap = try {
+                            Bitmap.wrapHardwareBuffer(
+                                screenshotResult.hardwareBuffer,
+                                screenshotResult.colorSpace
+                            )?.copy(Bitmap.Config.ARGB_8888, false)
+                        } catch (_: Exception) {
+                            null
+                        } finally {
+                            screenshotResult.hardwareBuffer.close()
+                        }
+                        if (continuation.isActive) {
+                            continuation.resume(bitmap)
+                        }
+                    }
+
+                    override fun onFailure(errorCode: Int) {
+                        if (continuation.isActive) {
+                            continuation.resume(null)
+                        }
+                    }
+                }
+
+                try {
+                    takeScreenshot(
+                        Display.DEFAULT_DISPLAY,
+                        ContextCompat.getMainExecutor(this@ViewInspectionAccessibilityService),
+                        callback
+                    )
+                } catch (_: Exception) {
+                    if (continuation.isActive) {
+                        continuation.resume(null)
+                    }
                 }
             }
         }
