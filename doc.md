@@ -33,7 +33,7 @@ For development purpose, the app can also capture and save view hierarchy for la
 |                   FloatingOverlayService                     |
 |  - Foreground service with notification                      |
 |  - Manages floating button window                            |
-|  - Sends broadcast on button click                           |
+|  - Sends broadcast on user action                            |
 +--------------------------------------------------------------+
                               |
                               | broadcast: INSPECT_ACTION
@@ -282,7 +282,7 @@ Foreground service that hosts the floating button.
 **Responsibilities:**
 1. Creates notification channel and foreground notification
 2. Instantiates `FloatingOverlayManager`
-3. Sends inspection broadcast when button is clicked
+3. Sends inspection broadcast when user clicks floating button or notification action
 
 #### `overlay/FloatingOverlayManager.kt`
 Creates and manages the floating button window.

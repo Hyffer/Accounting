@@ -3,6 +3,7 @@
     <string name="accessibility_service_description">Allows this app to inspect view hierarchies for debugging and analyzing payment interfaces.</string>
     <string name="overlay_notification_title">View Inspector Active</string>
     <string name="overlay_notification_content">Inspection overlay is running</string>
+    <string name="notification_action_capture">Capture</string>
     <string name="notification_channel_name">View Inspector</string>
     <string name="notification_channel_description">Notification for view inspector overlay service</string>
     <string name="overlay_permission_required">Overlay permission is required to display the floating button</string>

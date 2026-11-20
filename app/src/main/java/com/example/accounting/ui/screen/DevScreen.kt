@@ -89,7 +89,8 @@ fun DevScreen(
                 Text(
                     text = "1. Tap 'Start Inspection' to show the floating button\n" +
                             "2. Navigate to any app you want to inspect\n" +
-                            "3. Tap the floating 'V' button to capture the view hierarchy\n" +
+                            "3. Tap the floating 'V' button to capture the view hierarchy." +
+                            " If the floating button not available, click 'Capture' on the notification\n" +
                             "4. Toast will confirm the inspection is saved\n" +
                             "5. Files are saved to: /data/data/com.example.accounting/files/inspections/",
                     style = MaterialTheme.typography.bodyMedium,

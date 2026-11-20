@@ -31,6 +31,10 @@ open class ViewInspectionAccessibilityService : AccessibilityService() {
     companion object {
         const val INSPECT_ACTION = "com.example.accounting.INSPECT_ACTION"
         private const val DUPLICATE_WINDOW_MS = 60_000L // 1 minute
+
+        @Volatile
+        var instance: ViewInspectionAccessibilityService? = null
+            private set
     }
 
     private val fileStorageManager by lazy { FileStorageManager(this) }
@@ -49,6 +53,7 @@ open class ViewInspectionAccessibilityService : AccessibilityService() {
 
     override fun onServiceConnected() {
         super.onServiceConnected()
+        instance = this
 
         val filter = IntentFilter(INSPECT_ACTION)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -135,8 +140,14 @@ open class ViewInspectionAccessibilityService : AccessibilityService() {
         // Handle interruption
     }
 
+    override fun onUnbind(intent: Intent?): Boolean {
+        instance = null
+        return super.onUnbind(intent)
+    }
+
     override fun onDestroy() {
         super.onDestroy()
+        instance = null
         try {
             unregisterReceiver(inspectReceiver)
         } catch (_: Exception) {

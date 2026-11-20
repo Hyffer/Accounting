@@ -317,7 +317,7 @@ RecentScreen (NavHost)
 |  +------------------------------------+  |
 |  | 1. Tap 'Start Inspection'          |  |
 |  | 2. Navigate to app                 |  |
-|  | 3. Tap floating button             |  |
+|  | 3. Capture view hierarchy          |  |
 |  | 4. Check saved files               |  |
 |  +------------------------------------+  |
 +------------------------------------------+
