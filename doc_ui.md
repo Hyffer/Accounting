@@ -311,7 +311,7 @@ RecentScreen (NavHost)
 |  | Service is running                 |  |
 |  +------------------------------------+  |
 |                                          |
-|  [Start Inspection]  [Stop Inspection]   |
+|  [Start Inspection] (toggles to Stop)    |
 |                                          |
 |  Card: Instructions                      |
 |  +------------------------------------+  |

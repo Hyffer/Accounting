@@ -1,7 +1,7 @@
 package com.example.accounting.util
 
-import com.example.accounting.model.Rect
 import com.example.accounting.model.PaymentViewType
+import com.example.accounting.model.Rect
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import com.google.gson.TypeAdapter

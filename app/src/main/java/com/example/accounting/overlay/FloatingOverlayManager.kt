@@ -27,9 +27,10 @@ class FloatingOverlayManager(
     fun show() {
         if (overlayView != null) return
 
+        val buttonSize = dpToPx(32)
         layoutParams = LayoutParams(
-            LayoutParams.WRAP_CONTENT,
-            LayoutParams.WRAP_CONTENT,
+            buttonSize,
+            buttonSize,
             LayoutParams.TYPE_APPLICATION_OVERLAY,
             LayoutParams.FLAG_NOT_FOCUSABLE or LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH,
             PixelFormat.TRANSLUCENT
@@ -97,14 +98,10 @@ class FloatingOverlayManager(
     }
 
     private fun createFloatingButton(): View {
-        val size = dpToPx(64)
-        val container = FrameLayout(context).apply {
-            layoutParams = FrameLayout.LayoutParams(size, size)
-        }
+        val container = FrameLayout(context)
 
         val background = GradientDrawable().apply {
             shape = GradientDrawable.OVAL
-            setSize(100, 100)
             setColor(Purple40.toArgb()) // Material primary color
         }
 

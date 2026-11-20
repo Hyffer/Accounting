@@ -3,7 +3,6 @@ package com.example.accounting.ui.screen
 import android.content.Intent
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -56,30 +55,19 @@ fun DevScreen(
                     style = MaterialTheme.typography.bodyLarge
                 )
 
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Button(
-                        onClick = {
-                            val intent = Intent(context, FloatingOverlayService::class.java)
-                            ContextCompat.startForegroundService(context, intent)
-                            isServiceRunning = true
-                        },
-                        enabled = !isServiceRunning
-                    ) {
-                        Text("Start Inspection")
-                    }
-
-                    Button(
-                        onClick = {
-                            val intent = Intent(context, FloatingOverlayService::class.java)
+                Button(
+                    onClick = {
+                        val intent = Intent(context, FloatingOverlayService::class.java)
+                        if (isServiceRunning) {
                             context.stopService(intent)
                             isServiceRunning = false
-                        },
-                        enabled = isServiceRunning
-                    ) {
-                        Text("Stop Inspection")
+                        } else {
+                            ContextCompat.startForegroundService(context, intent)
+                            isServiceRunning = true
+                        }
                     }
+                ) {
+                    Text(if (isServiceRunning) "Stop Inspection" else "Start Inspection")
                 }
             }
         }
